@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ------------------------------------------------------
+// Better Auth Schema Models
+// ------------------------------------------------------
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  savedRoutes   SavedRoute[]
+  hotspotReports HotspotReport[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
+}
+
+// ------------------------------------------------------
+// AirTrace Domain Models (BUILD_SPEC.md)
+// ------------------------------------------------------
+
+model Location {
+  id                String           @id @default(uuid())
+  name              String
+  latitude          Float
+  longitude         Float
+  source            String           // e.g. 'OpenAQ', 'Open-Meteo'
+  externalStationId String?
+  createdAt         DateTime         @default(now())
+  measurements      AirMeasurement[]
+
+  @@map("locations")
+}
+
+model AirMeasurement {
+  id          BigInt   @id @default(autoincrement())
+  locationId  String
+  recordedAt  DateTime
+  pm25        Float?
+  pm10        Float?
+  no2         Float?
+  so2         Float?
+  co          Float?
+  o3          Float?
+  temperature Float?
+  humidity    Float?
+  source      String
+  createdAt   DateTime @default(now())
+
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId, recordedAt(sort: Desc)])
+  @@map("air_measurements")
+}
+
+model Forecast {
+  id               BigInt   @id @default(autoincrement())
+  latitude         Float
+  longitude        Float
+  forecastFor      DateTime
+  pm25             Float?
+  pm10             Float?
+  weatherCondition String?
+  windSpeed        Float?
+  windDirection    Float?
+  source           String
+  generatedAt      DateTime @default(now())
+
+  @@index([latitude, longitude, forecastFor])
+  @@map("forecasts")
+}
+
+model FireEvent {
+  id         BigInt   @id @default(autoincrement())
+  latitude   Float
+  longitude  Float
+  detectedAt DateTime
+  satellite  String   // 'MODIS', 'VIIRS'
+  confidence String?
+  frp        Float?   // Fire Radiative Power (MW)
+  createdAt  DateTime @default(now())
+
+  @@index([detectedAt(sort: Desc)])
+  @@map("fire_events")
+}
+
+model SavedRoute {
+  id                 String   @id @default(uuid())
+  userId             String
+  name               String
+  originLat          Float
+  originLng          Float
+  originName         String
+  destLat            Float
+  destLng            Float
+  destName           String
+  activityMode       String   // 'sedentary', 'walking', 'biking', 'transit'
+  totalExposureScore Float?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("saved_routes")
+}
+
+model HotspotReport {
+  id          String   @id @default(uuid())
+  userId      String?
+  latitude    Float
+  longitude   Float
+  category    String   // 'trash_burning', 'construction_dust', 'industrial_smoke', 'vehicle_exhaust', 'other'
+  description String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("hotspot_reports")
+}
