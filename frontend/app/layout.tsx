@@ -4,6 +4,9 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { AuthProvider } from "@/lib/auth-context";
+import { RouteGuard } from "@/components/auth/route-guard";
+import { OnboardingModal } from "@/components/auth/onboarding-modal";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,7 +28,7 @@ const fontHeadline = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "BreatheWise — Actionable Air Intelligence",
+  title: "AirTrace / BreatheWise — Actionable Air Intelligence",
   description:
     "Personal exposure tracking, pollution-aware routing, and grounded AI air assistance. Know what you breathe.",
 };
@@ -46,11 +49,14 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-full flex flex-col font-sans selection:bg-blue-100 selection:text-blue-800 bg-[var(--background)] text-[var(--on-surface)]">
-        <Header />
-        <main className="w-full pt-24 lg:pt-16 flex-1 flex flex-col">
-          {children}
-        </main>
-        <Footer />
+        <AuthProvider>
+          <Header />
+          <main className="w-full pt-24 lg:pt-16 flex-1 flex flex-col">
+            <RouteGuard>{children}</RouteGuard>
+          </main>
+          <Footer />
+          <OnboardingModal />
+        </AuthProvider>
       </body>
     </html>
   );
