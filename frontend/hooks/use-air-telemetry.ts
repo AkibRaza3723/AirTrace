@@ -33,6 +33,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
 
 export function useAirTelemetry() {
   const [telemetry, setTelemetry] = useState<AirTelemetryData | null>(null);
+  const [stations, setStations] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({
@@ -41,15 +42,23 @@ export function useAirTelemetry() {
   });
   const [isUsingLiveLocation, setIsUsingLiveLocation] = useState<boolean>(false);
 
+  const fetchStations = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/aqi/stations`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) setStations(json.data);
+    } catch (e) {
+      console.warn("Failed to fetch Delhi stations:", e);
+    }
+  }, []);
+
   const fetchTelemetry = useCallback(async (lat: number, lng: number) => {
     try {
       setLoading(true);
       setError(null);
 
       const res = await fetch(`${BACKEND_URL}/api/aqi/live?lat=${lat}&lng=${lng}`);
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
 
       const json = await res.json();
       if (json.success && json.data) {
@@ -66,8 +75,8 @@ export function useAirTelemetry() {
   }, []);
 
   const requestLocation = useCallback(() => {
+    fetchStations();
     if (typeof window === "undefined" || !navigator.geolocation) {
-      console.warn("Geolocation API is not available on this browser");
       fetchTelemetry(coords.lat, coords.lng);
       return;
     }
@@ -80,19 +89,13 @@ export function useAirTelemetry() {
         setIsUsingLiveLocation(true);
         fetchTelemetry(latitude, longitude);
       },
-      (geoError) => {
-        console.warn("Geolocation permission denied/failed:", geoError.message);
+      () => {
         setIsUsingLiveLocation(false);
-        // Fall back to default coordinate
         fetchTelemetry(coords.lat, coords.lng);
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
-      }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
-  }, [coords.lat, coords.lng, fetchTelemetry]);
+  }, [coords.lat, coords.lng, fetchTelemetry, fetchStations]);
 
   useEffect(() => {
     requestLocation();
@@ -100,11 +103,15 @@ export function useAirTelemetry() {
 
   return {
     telemetry,
+    stations,
     loading,
     error,
     coords,
     isUsingLiveLocation,
-    refetch: () => fetchTelemetry(coords.lat, coords.lng),
+    refetch: () => {
+      fetchTelemetry(coords.lat, coords.lng);
+      fetchStations();
+    },
     requestLocation,
     fetchByCoords: fetchTelemetry,
   };

@@ -86,3 +86,56 @@ export async function getLiveAqi(req: Request, res: Response) {
   }
 }
 
+const DELHI_STATIONS = [
+  { name: "Connaught Place", city: "Connaught Place (Central)", lat: 28.6315, lng: 77.2167, headline: "Central business corridor & commercial hub" },
+  { name: "Rohini", city: "Rohini (North Delhi)", lat: 28.7041, lng: 77.1025, headline: "North Delhi residential & industrial belt" },
+  { name: "Hauz Khas", city: "Hauz Khas (South Delhi)", lat: 28.5494, lng: 77.2001, headline: "South Delhi district & green zone" },
+  { name: "Anand Vihar", city: "Anand Vihar (East Delhi)", lat: 28.6469, lng: 77.3160, headline: "East Delhi transit hub & ISBT corridor" },
+  { name: "Dwarka", city: "Dwarka (West Delhi)", lat: 28.5921, lng: 77.0460, headline: "West Delhi sub-city near IGI corridor" },
+];
+
+export async function getDelhiStations(_req: Request, res: Response) {
+  try {
+    const lats = DELHI_STATIONS.map((s) => s.lat).join(",");
+    const lngs = DELHI_STATIONS.map((s) => s.lng).join(",");
+
+    const [aqRes, wRes] = await Promise.all([
+      fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lats}&longitude=${lngs}&current=us_aqi,pm10,pm2_5,ozone`),
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,uv_index`),
+    ]);
+
+    const aqData: any = await aqRes.json();
+    const wData: any = await wRes.json();
+
+    const stations = DELHI_STATIONS.map((s, idx) => {
+      const curAq = (Array.isArray(aqData) ? aqData[idx]?.current : aqData?.current) || {};
+      const curW = (Array.isArray(wData) ? wData[idx]?.current : wData?.current) || {};
+      const aqi = Math.round(curAq.us_aqi ?? 150);
+      const cat = getAqiCategory(aqi);
+
+      return {
+        name: s.name,
+        city: s.city,
+        lat: s.lat,
+        lng: s.lng,
+        aqi,
+        status: cat.status,
+        statusColor: cat.color,
+        headline: `${cat.status} — ${s.headline}`,
+        subtext: cat.desc,
+        pm25: curAq.pm2_5 ?? 60,
+        pm10: curAq.pm10 ?? 120,
+        o3: curAq.ozone ?? 40,
+        temp: `${Math.round(curW.temperature_2m ?? 28)}°C`,
+        humidity: `${Math.round(curW.relative_humidity_2m ?? 45)}%`,
+        wind: `${Math.round(curW.wind_speed_10m ?? 10)} km/h`,
+        uv: `UV ${Math.round(curW.uv_index ?? 3)}`,
+      };
+    });
+
+    return sendSuccess(res, stations, "Delhi regional stations fetched");
+  } catch (err: any) {
+    return sendError(res, err.message || "Failed to load Delhi stations", 500);
+  }
+}
+
