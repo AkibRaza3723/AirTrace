@@ -20,44 +20,6 @@ interface LocationOption {
   temp: string; humidity: string; wind: string; uv: string;
 }
 
-const LOCATIONS: LocationOption[] = [
-  {
-    name: "Williamsburg, Brooklyn, NY", city: "Brooklyn, NY",
-    aqi: 38, status: "Good", statusColor: "good",
-    headline: "Clean air — excellent conditions right now.",
-    subtext: "Maritime air flowing through East River with virtually no fine particles. Safe for all outdoor activities.",
-    pm25: 7.8, pm10: 14.2, o3: 22, temp: "68°F", humidity: "45%", wind: "9 mph WSW", uv: "UV 3",
-  },
-  {
-    name: "Downtown Manhattan, NY", city: "Manhattan, NY",
-    aqi: 44, status: "Good", statusColor: "good",
-    headline: "Optimal conditions across the financial corridor.",
-    subtext: "Light crosswinds keeping canyon avenues clear. Minimal diesel soot buildup.",
-    pm25: 9.1, pm10: 16.5, o3: 26, temp: "69°F", humidity: "42%", wind: "11 mph S", uv: "UV 4",
-  },
-  {
-    name: "Queens Plaza, NY", city: "Queens Plaza, NY",
-    aqi: 52, status: "Moderate", statusColor: "moderate",
-    headline: "Acceptable air with minor rush hour eddy.",
-    subtext: "Elevated transit interchange causing slight localized PM10 dust increase.",
-    pm25: 12.4, pm10: 24.8, o3: 31, temp: "67°F", humidity: "48%", wind: "7 mph E", uv: "UV 3",
-  },
-  {
-    name: "South Congress, Austin, TX", city: "Austin (SoCo), TX",
-    aqi: 29, status: "Good", statusColor: "good",
-    headline: "Pristine hill country circulation.",
-    subtext: "Exceptional purity today. High atmospheric dispersion index.",
-    pm25: 5.2, pm10: 10.1, o3: 18, temp: "76°F", humidity: "38%", wind: "12 mph SSE", uv: "UV 6",
-  },
-  {
-    name: "Mission District, SF, CA", city: "San Francisco, CA",
-    aqi: 34, status: "Good", statusColor: "good",
-    headline: "Cool marine layer cleansing the bay basin.",
-    subtext: "Strong onshore breeze scouring particulates out toward the central valley.",
-    pm25: 6.9, pm10: 12.0, o3: 19, temp: "61°F", humidity: "65%", wind: "14 mph W", uv: "UV 4",
-  },
-];
-
 const FORECAST = [
   { time: "Now",   aqi: 38, label: "Good",     color: "text-emerald-600" },
   { time: "3 PM",  aqi: 40, label: "Good",     color: "text-emerald-600" },
@@ -81,11 +43,17 @@ const ROUTE_SHORTCUTS = [
 ];
 
 export function DashboardView() {
-  const { telemetry, loading, isUsingLiveLocation, refetch } = useAirTelemetry();
+  const { telemetry, stations, loading, isUsingLiveLocation, refetch } = useAirTelemetry();
   const [selectedPreset, setSelectedPreset] = useState<LocationOption | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Active display data: prefer live telemetry if no preset override is selected
+  const fallback: LocationOption = {
+    name: "Connaught Place", city: "Connaught Place (Central)", aqi: 157, status: "Unhealthy", statusColor: "unhealthy",
+    headline: "Unhealthy — Central business corridor", subtext: "Everyone may begin to experience health effects.",
+    pm25: 61, pm10: 164.4, o3: 84, temp: "25°C", humidity: "80%", wind: "9 km/h", uv: "UV 0",
+  };
+
+  // Active display data: prefer selected station, then live telemetry, then first Delhi station
   const activeData: LocationOption = selectedPreset || (telemetry ? {
     name: isUsingLiveLocation ? "Your Location (Live GPS)" : "Live Telemetry Station",
     city: isUsingLiveLocation ? "Live Location (GPS)" : "Live Station",
@@ -101,13 +69,18 @@ export function DashboardView() {
     humidity: telemetry.humidity,
     wind: telemetry.wind,
     uv: telemetry.uv,
-  } : LOCATIONS[0]);
+  } : (stations[0] || fallback));
 
-  const maxAqi = 150;
-  const circumference = 427.2;
-  const progressRatio = Math.min(activeData.aqi / maxAqi, 1);
-  const strokeDashoffset = circumference * (1 - progressRatio);
-  const strokeColor = activeData.aqi <= 50 ? "#10b981" : activeData.aqi <= 100 ? "#f59e0b" : "#ef4444";
+  const maxAqi = 300;
+  const strokeDashoffset = 427.2 * (1 - Math.min(activeData.aqi / maxAqi, 1));
+  const strokeColor = activeData.aqi <= 50 ? "#10b981" : activeData.aqi <= 100 ? "#f59e0b" : activeData.aqi <= 200 ? "#ef4444" : "#7c3aed";
+
+  const getStatusBadge = (color: string) => {
+    if (color === "good") return "status-good";
+    if (color === "moderate") return "status-moderate";
+    if (color === "unhealthy-sensitive" || color === "unhealthy") return "bg-red-100 text-red-700";
+    return "bg-purple-100 text-purple-700";
+  };
 
   return (
     <div className="w-full flex flex-col gap-6 animate-fade-up">
@@ -136,7 +109,7 @@ export function DashboardView() {
 
           {dropdownOpen && (
             <div className="absolute top-full left-0 mt-2 w-72 rounded-xl bg-white border border-gray-200 shadow-xl p-2 z-40 animate-fade-up">
-              <p className="px-3 py-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-medium">Switch Station</p>
+              <p className="px-3 py-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-medium">Switch Location</p>
               
               {/* Option for Live Device Location */}
               <button
@@ -153,13 +126,15 @@ export function DashboardView() {
                   Live GPS Location
                 </span>
                 {telemetry && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                  <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full",
+                    telemetry.aqi <= 50 ? "bg-emerald-100 text-emerald-700" : telemetry.aqi <= 100 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+                  )}>
                     AQI {telemetry.aqi}
                   </span>
                 )}
               </button>
 
-              {LOCATIONS.map((loc) => (
+              {stations.map((loc) => (
                 <button
                   key={loc.name}
                   onClick={() => { setSelectedPreset(loc); setDropdownOpen(false); }}
@@ -172,7 +147,7 @@ export function DashboardView() {
                 >
                   <span>{loc.city}</span>
                   <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full",
-                    loc.statusColor === "good" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    loc.aqi <= 50 ? "bg-emerald-100 text-emerald-700" : loc.aqi <= 100 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
                   )}>AQI {loc.aqi}</span>
                 </button>
               ))}
@@ -228,7 +203,7 @@ export function DashboardView() {
                       {activeData.aqi}
                     </span>
                     <span className={cn("text-xs font-semibold mt-1 px-2.5 py-0.5 rounded-full",
-                      activeData.statusColor === "good" ? "status-good" : "status-moderate"
+                      getStatusBadge(activeData.statusColor)
                     )}>
                       {activeData.status}
                     </span>
@@ -238,7 +213,7 @@ export function DashboardView() {
                 {/* Verdict */}
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <Badge className={activeData.statusColor === "good" ? "status-good border-0" : "status-moderate border-0"}>
+                    <Badge className={cn("border-0", getStatusBadge(activeData.statusColor))}>
                       ● {activeData.status} Air Quality
                     </Badge>
                     <Badge variant="secondary" className="font-mono text-[10px]">
