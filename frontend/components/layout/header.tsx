@@ -11,7 +11,6 @@ const NAV_ITEMS = [
   { label: "Exposure",      href: "/exposure" },
   { label: "Route Planner", href: "/route" },
   { label: "Campus Safety", href: "/schools" },
-  { label: "Satellite",     href: "/hotspots" },
   { label: "AI Assistant",  href: "/assistant" },
 ];
 

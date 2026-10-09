@@ -2,7 +2,7 @@
 
 **Target Event:** WeMakeDevs Environmental Hacks 2026 — Air Track  
 **Document Status:** Build-Ready Specification  
-**Architecture:** Next.js (Frontend) + Node.js/TypeScript (API) + PostgreSQL/Redis + AWS Infrastructure  
+**Architecture:** Next.js (Frontend) + Node.js/TypeScript (API) + PostgreSQL/Redis + AWS Infrastructure 
 
 ---
 

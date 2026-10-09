@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Thermometer, Droplets, Wind, Sun, Zap, ArrowRight, Timer,
-  CheckCircle2, ChevronDown, RotateCcw, Activity, Radio,
-  MapPin, ShieldCheck, TrendingDown, BarChart3, Leaf,
+  CheckCircle2, ChevronDown, RotateCcw, Activity,
+  MapPin, ShieldCheck, TrendingDown, BarChart3, Leaf, Radio,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,7 +77,6 @@ const QUICK_ACTIONS = [
 const ROUTE_SHORTCUTS = [
   { label: "Route Optimizer", desc: "Compare routes by pollution exposure", href: "/route", icon: TrendingDown, color: "text-blue-600 bg-blue-50" },
   { label: "Campus Safety", desc: "School & college protocol dashboard", href: "/schools", icon: ShieldCheck, color: "text-emerald-600 bg-emerald-50" },
-  { label: "Satellite Intel", desc: "NASA FIRMS fire & smoke tracking", href: "/hotspots", icon: Radio, color: "text-amber-600 bg-amber-50" },
 ];
 
 export default function HomePage() {
