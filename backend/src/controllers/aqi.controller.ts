@@ -5,11 +5,11 @@ import { sendSuccess, sendError } from "../utils/response.js";
  * Helper to determine AQI status category and theme
  */
 function getAqiCategory(aqi: number) {
-  if (aqi <= 50) return { status: "Good", color: "good", desc: "Air quality is satisfactory and poses little or no risk." };
-  if (aqi <= 100) return { status: "Moderate", color: "moderate", desc: "Air quality is acceptable; some pollutants may affect sensitive people." };
-  if (aqi <= 150) return { status: "Unhealthy for Sensitive Groups", color: "unhealthy-sensitive", desc: "Members of sensitive groups may experience health effects." };
-  if (aqi <= 200) return { status: "Unhealthy", color: "unhealthy", desc: "Everyone may begin to experience health effects." };
-  if (aqi <= 300) return { status: "Very Unhealthy", color: "very-unhealthy", desc: "Health alert: everyone may experience serious effects." };
+  if (aqi <= 100) return { status: "Good", color: "good", desc: "Air quality is satisfactory and poses little or no risk." };
+  if (aqi <= 150) return { status: "Moderate", color: "moderate", desc: "Air quality is acceptable; some pollutants may affect sensitive people." };
+  if (aqi <= 200) return { status: "Unhealthy for Sensitive Groups", color: "unhealthy-sensitive", desc: "Members of sensitive groups may experience health effects." };
+  if (aqi <= 250) return { status: "Unhealthy", color: "unhealthy", desc: "Everyone may begin to experience health effects." };
+  if (aqi <= 400) return { status: "Very Unhealthy", color: "very-unhealthy", desc: "Health alert: everyone may experience serious effects." };
   return { status: "Hazardous", color: "hazardous", desc: "Health warning of emergency conditions." };
 }
 

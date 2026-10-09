@@ -20,4 +20,11 @@ export const env = {
   OPENAQ_API_KEY: process.env.OPENAQ_API_KEY || "",
   NASA_FIRMS_MAP_KEY: process.env.NASA_FIRMS_MAP_KEY || "",
   MAPBOX_ACCESS_TOKEN: process.env.MAPBOX_ACCESS_TOKEN || "",
+
+  // AWS Bedrock AI Model Configuration
+  AWS_REGION: process.env.AWS_REGION || "us-east-1",
+  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || "",
+  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || "",
+  AWS_BEDROCK_MODEL_ID: process.env.AWS_BEDROCK_MODEL_ID || "anthropic.claude-3-haiku-20240307-v1:0",
 };
+
