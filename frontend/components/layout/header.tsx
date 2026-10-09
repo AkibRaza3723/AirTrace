@@ -2,47 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, ChevronDown, Sparkles } from "lucide-react";
+import { Bell, ChevronDown, Wind, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", href: "/" },
-  { label: "My Inhaled Dose", href: "/exposure" },
-  { label: "Route Optimizer", href: "/route" },
-  { label: "Campus Protocol", href: "/schools" },
-  { label: "Satellite Intel", href: "/hotspots" },
-  { label: "Air Assistant", href: "/assistant" },
+  { label: "Dashboard",     href: "/" },
+  { label: "Exposure",      href: "/exposure" },
+  { label: "Route Planner", href: "/route" },
+  { label: "Campus Safety", href: "/schools" },
+  { label: "Satellite",     href: "/hotspots" },
+  { label: "AI Assistant",  href: "/assistant" },
 ];
 
 export function Header() {
   const pathname = usePathname();
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 glass-header border-b border-white/[0.06]">
-      <div className="h-16 w-full px-6 md:px-10 flex items-center justify-between gap-4">
-        {/* Brand & Location */}
-        <div className="flex items-center gap-4 shrink-0">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-[var(--primary)]/15 border border-[var(--primary)]/30 flex items-center justify-center text-[var(--primary)] font-bold group-hover:scale-105 transition-transform">
-              🍃
-            </div>
-            <span className="font-heading text-lg font-bold tracking-tight text-[var(--primary-emerald)]">
-              BreatheWise
-            </span>
-          </Link>
+    <header className="fixed top-0 inset-x-0 z-50 glass-header border-b border-gray-200">
+      <div className="h-16 w-full px-4 md:px-8 flex items-center justify-between gap-4 max-w-screen-2xl mx-auto">
 
-          <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--surface-container-high)]/70 hover:bg-[var(--surface-container-highest)] border border-white/[0.06] text-xs transition-colors cursor-pointer">
-            <span className="text-[var(--on-surface-variant)] flex items-center gap-1 font-mono">
-              <span className="text-[var(--primary)]">📍</span> Brooklyn, NY • Station EPA-402 (2m ago)
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
-            <span className="font-mono text-[var(--primary)] font-semibold">Live</span>
-            <ChevronDown className="w-3.5 h-3.5 text-[var(--on-surface-variant)]" />
+        {/* Brand */}
+        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+            <Wind className="w-4 h-4 text-white" />
           </div>
-        </div>
+          <span className="font-bold text-lg tracking-tight text-gray-900 group-hover:text-blue-700 transition-colors">
+            AirTrace
+          </span>
+        </Link>
 
-        {/* Navigation Tabs */}
-        <nav className="hidden lg:flex items-center gap-1 bg-[var(--surface-container-low)]/80 p-1 rounded-full border border-white/[0.06]">
+        {/* Desktop Nav */}
+        <nav className="hidden lg:flex items-center gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -50,10 +41,10 @@ export function Header() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "px-3.5 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap",
+                  "px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
                   isActive
-                    ? "bg-[var(--primary-container)] text-[var(--on-primary-container)] font-semibold shadow-[0_0_16px_rgba(16,185,129,0.35)]"
-                    : "text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+                    ? "nav-pill-active"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-white hover:shadow-sm"
                 )}
               >
                 {item.label}
@@ -62,29 +53,42 @@ export function Header() {
           })}
         </nav>
 
-        {/* Right Status & Profile */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--surface-container-high)]/80 border border-white/[0.06] shadow-[0_0_12px_rgba(16,185,129,0.15)]">
-            <span className="w-2 h-2 rounded-full bg-[var(--primary)] animate-ping" />
-            <span className="font-mono text-xs font-semibold text-[var(--on-surface)]">AQI 42</span>
-            <span className="font-mono text-xs text-[var(--primary)]">• Crisp & Clean</span>
+        {/* Right side */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Live AQI badge */}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-semibold text-emerald-700">AQI 42</span>
+            <span className="text-emerald-600 font-medium">Good</span>
           </div>
 
-          <button
+          {/* Location pill */}
+          <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200 text-xs text-gray-600 cursor-pointer hover:bg-gray-200 transition-colors">
+            <MapPin className="w-3.5 h-3.5 text-blue-600" />
+            <span className="font-medium">Brooklyn, NY</span>
+            <ChevronDown className="w-3 h-3 text-gray-400" />
+          </div>
+
+          {/* Notifications */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative rounded-full w-9 h-9 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
             aria-label="Notifications"
-            className="relative p-2 rounded-full bg-[var(--surface-container-high)]/60 text-[var(--on-surface-variant)] hover:text-[var(--on-surface)] hover:bg-[var(--surface-container-highest)] border border-white/[0.06] transition-colors cursor-pointer"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--secondary)] ring-2 ring-[var(--surface-dim)]" />
-          </button>
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+          </Button>
 
-          <div className="w-8 h-8 rounded-full ring-2 ring-[var(--primary)]/40 flex items-center justify-center bg-[var(--surface-container-high)] text-sm font-semibold text-[var(--primary)]">
-            BW
+          {/* Avatar */}
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+            AT
           </div>
         </div>
       </div>
-      {/* Mobile nav bar */}
-      <div className="lg:hidden flex items-center gap-1 overflow-x-auto px-4 py-2 border-t border-white/[0.04] bg-[var(--surface-container-lowest)]/90">
+
+      {/* Mobile nav */}
+      <div className="lg:hidden flex items-center gap-1 overflow-x-auto px-4 pb-2 border-t border-gray-100 bg-white/95">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -92,10 +96,10 @@ export function Header() {
               key={item.href}
               href={item.href}
               className={cn(
-                "px-2.5 py-1 rounded-full text-[11px] font-medium transition-all whitespace-nowrap",
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
                 isActive
-                  ? "bg-[var(--primary-container)] text-[var(--on-primary-container)] font-semibold"
-                  : "text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               )}
             >
               {item.label}

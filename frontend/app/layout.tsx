@@ -1,25 +1,27 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-headline",
-  weight: ["500", "600", "700"],
-});
-
-const plusJakarta = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-body",
+  weight: ["400", "500", "600", "700"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono-jetbrains",
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
+});
+
+// --font-headline alias → same as body for clean sans-serif uniformity
+const fontHeadline = Inter({
+  subsets: ["latin"],
+  variable: "--font-headline",
+  weight: ["600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -37,13 +39,13 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn(
-        "dark h-full",
-        spaceGrotesk.variable,
-        plusJakarta.variable,
+        "h-full",
+        inter.variable,
+        fontHeadline.variable,
         jetbrainsMono.variable
       )}
     >
-      <body className="min-h-full flex flex-col font-sans selection:bg-[var(--primary-container)] selection:text-[var(--on-primary-container)] bg-[var(--background)] text-[var(--on-surface)]">
+      <body className="min-h-full flex flex-col font-sans selection:bg-blue-100 selection:text-blue-800 bg-[var(--background)] text-[var(--on-surface)]">
         <Header />
         <main className="w-full pt-24 lg:pt-16 flex-1 flex flex-col">
           {children}

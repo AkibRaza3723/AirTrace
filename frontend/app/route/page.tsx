@@ -2,528 +2,239 @@
 
 import { useState } from "react";
 import {
-  Navigation,
-  CheckCircle,
-  AlertTriangle,
-  Scale,
-  Bike,
-  Footprints,
-  Train,
-  Sliders,
-  Layers,
-  Leaf,
-  Wind,
-  ShieldAlert,
-  ShieldCheck,
-  TrendingUp,
-  MapPin,
-  ChevronRight,
+  Navigation, CheckCircle, AlertTriangle, Scale, Bike,
+  Footprints, Train, Leaf, Wind, MapPin, ChevronRight, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type RouteType = "clean" | "balanced" | "fast";
-type ModeType = "walk" | "cycle" | "scooter" | "transit";
+type ModeType  = "walk" | "cycle" | "transit";
+
+const ROUTES = {
+  clean:    { label: "Lowest Exposure",   time: "29 min", exposure: 32, saving: "–50%", color: "text-emerald-600", badgeClass: "status-good",     icon: Leaf,          desc: "Residential streets, park paths — max exposure avoidance." },
+  balanced: { label: "Balanced",          time: "26 min", exposure: 41, saving: "–36%", color: "text-blue-600",    badgeClass: "bg-blue-100 text-blue-700 border border-blue-200", icon: Scale,         desc: "4 min longer than fastest. Avoids the truck corridor on 3rd Ave." },
+  fast:     { label: "Fastest Route",     time: "22 min", exposure: 64, saving: "—",    color: "text-red-500",     badgeClass: "status-unhealthy",  icon: Navigation,    desc: "Ring road direct — high exposure from heavy vehicles." },
+};
+
+const TRAVEL_MODES = [
+  { id: "walk",    label: "Walk",    icon: Footprints, factor: "1.5×" },
+  { id: "cycle",   label: "Cycle",   icon: Bike,       factor: "2.5×" },
+  { id: "transit", label: "Transit", icon: Train,      factor: "1.0×" },
+];
 
 export default function RoutePage() {
   const [selectedRoute, setSelectedRoute] = useState<RouteType>("clean");
-  const [selectedMode, setSelectedMode] = useState<ModeType>("cycle");
-  const [origin, setOrigin] = useState("Greenpoint Loft, Brooklyn");
-  const [destination, setDestination] = useState("SoHo Creative Studio, Manhattan");
-  const [navigating, setNavigating] = useState(false);
+  const [selectedMode,  setSelectedMode]  = useState<ModeType>("cycle");
+  const [origin, setOrigin]               = useState("Greenpoint Loft, Brooklyn");
+  const [destination, setDestination]     = useState("SoHo Creative Studio, Manhattan");
+  const [navigating, setNavigating]       = useState(false);
+
+  const active = ROUTES[selectedRoute];
 
   return (
-    <div className="relative w-full overflow-hidden px-6 md:px-12 py-6 flex flex-col gap-8">
-      {/* Top Navigation & Route Planner Ribbon */}
-      <div className="relative bg-[var(--surface-container-low)] border border-white/[0.08] rounded-2xl p-6 sm:p-8 shadow-xl overflow-hidden">
-        <div className="absolute -right-24 -top-24 w-96 h-96 bg-[var(--primary)]/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-[var(--tertiary)]/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="w-full px-4 md:px-8 py-6 flex flex-col gap-6 max-w-screen-2xl mx-auto">
 
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          {/* Origin/Destination Inputs */}
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-            {/* Origin */}
-            <div className="flex items-center gap-3 bg-[var(--surface-container-high)]/80 border border-white/[0.06] rounded-xl px-4 py-3 shadow-inner">
-              <MapPin className="w-5 h-5 text-[var(--primary)] shrink-0" />
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="font-mono text-[9px] text-[var(--on-surface-variant)] uppercase tracking-wider">
-                  Origin point
-                </span>
-                <input
-                  className="bg-transparent text-sm font-semibold text-[var(--on-surface)] focus:outline-none truncate w-full"
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Pollution-Aware Route Planner</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Compare routes by travel time and estimated cumulative pollution exposure.</p>
+      </div>
+
+      {/* Origin / Destination Input */}
+      <Card className="border-gray-200 shadow-sm">
+        <CardContent className="p-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-gray-500 uppercase tracking-wider">Origin</Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
+                <Input
                   value={origin}
                   onChange={(e) => setOrigin(e.target.value)}
-                  placeholder="Choose origin..."
+                  className="pl-9 border-gray-200 bg-gray-50"
+                  placeholder="Enter starting point..."
                 />
               </div>
-              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[var(--primary)]/15 text-[var(--primary)]">
-                AQI 38
-              </span>
             </div>
-
-            {/* Destination */}
-            <div className="flex items-center gap-3 bg-[var(--surface-container-high)]/80 border border-white/[0.06] rounded-xl px-4 py-3 shadow-inner">
-              <MapPin className="w-5 h-5 text-[var(--secondary)] shrink-0" />
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="font-mono text-[9px] text-[var(--on-surface-variant)] uppercase tracking-wider">
-                  Destination
-                </span>
-                <input
-                  className="bg-transparent text-sm font-semibold text-[var(--on-surface)] focus:outline-none truncate w-full"
+            <div className="space-y-1.5">
+              <Label className="text-xs text-gray-500 uppercase tracking-wider">Destination</Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                <Input
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
-                  placeholder="Choose destination..."
+                  className="pl-9 border-gray-200 bg-gray-50"
+                  placeholder="Enter destination..."
                 />
               </div>
-              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[var(--secondary)]/15 text-[var(--secondary)]">
-                AQI 69
-              </span>
             </div>
           </div>
 
-          {/* Mode Selector Switcher */}
-          <div className="flex items-center gap-1 bg-[var(--surface-container-highest)]/60 border border-white/[0.06] p-1 rounded-full shrink-0">
-            {[
-              { id: "walk", label: "Walk", icon: Footprints },
-              { id: "cycle", label: "Cycling", icon: Bike },
-              { id: "transit", label: "Transit", icon: Train },
-            ].map((m) => {
-              const Icon = m.icon;
-              const isActive = selectedMode === m.id;
-              return (
+          {/* Travel Mode + Compare Button */}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg border border-gray-200">
+              {TRAVEL_MODES.map((m) => (
                 <button
                   key={m.id}
                   onClick={() => setSelectedMode(m.id as ModeType)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer",
-                    isActive
-                      ? "bg-[var(--primary-container)] text-[var(--on-primary-container)] font-semibold shadow-md"
-                      : "text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer",
+                    selectedMode === m.id ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
                   )}
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{m.label}</span>
+                  <m.icon className="w-3.5 h-3.5" />
+                  {m.label}
+                  <span className="font-mono text-[10px] text-gray-400">{m.factor}</span>
                 </button>
-              );
-            })}
+              ))}
+            </div>
+            <Button
+              onClick={() => setNavigating(true)}
+              className="gradient-primary ml-auto"
+            >
+              <Navigation className="w-4 h-4 mr-1.5" />
+              {navigating ? "Calculating..." : "Compare Routes"}
+            </Button>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Recalculate CTA */}
-          <button className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] font-mono text-xs font-bold shadow-lg hover:brightness-105 transition-all cursor-pointer">
-            <Sliders className="w-4 h-4" />
-            <span>Recalculate Lungs</span>
-          </button>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+
+        {/* Route Cards */}
+        <div className="xl:col-span-5 flex flex-col gap-4">
+          <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+            <Scale className="w-4 h-4 text-blue-600" />
+            Route Options
+          </h2>
+          {(Object.entries(ROUTES) as [RouteType, typeof ROUTES.clean][]).map(([key, route]) => (
+            <Card
+              key={key}
+              onClick={() => setSelectedRoute(key)}
+              className={cn(
+                "border cursor-pointer transition-all shadow-sm",
+                selectedRoute === key
+                  ? "border-blue-200 shadow-md ring-1 ring-blue-100"
+                  : "border-gray-200 hover:border-gray-300 hover:shadow"
+              )}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center",
+                      key === "clean" ? "bg-emerald-50" : key === "balanced" ? "bg-blue-50" : "bg-red-50"
+                    )}>
+                      <route.icon className={cn("w-4 h-4", route.color)} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-gray-900">{route.label}</p>
+                      <p className="text-xs text-gray-400">{route.time}</p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className={cn("font-mono text-lg font-bold", route.color)}>{route.exposure}</div>
+                    <div className="text-[10px] text-gray-400">exp. pts</div>
+                    {route.saving !== "—" && (
+                      <span className="text-[10px] font-bold text-emerald-600">{route.saving}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-3 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={cn("h-full rounded-full transition-all",
+                      key === "clean" ? "bg-emerald-500" : key === "balanced" ? "bg-blue-500" : "bg-red-500"
+                    )}
+                    style={{ width: `${(route.exposure / 100) * 100}%` }}
+                  />
+                </div>
+
+                <p className="text-xs text-gray-500 mt-2">{route.desc}</p>
+
+                {selectedRoute === key && (
+                  <div className="mt-3 pt-2 border-t border-gray-100 flex items-center gap-1 text-xs font-semibold text-blue-600">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    Selected Route
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Strategy Banner */}
-        <div className="mt-4 pt-3 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-[var(--on-surface)]">
-            <Leaf className="w-4 h-4 text-[var(--primary)] animate-pulse" />
-            <span>
-              Breathe Smart Strategy: Trading <strong className="text-[var(--primary)]">+6 mins</strong> avoids{" "}
-              <strong className="text-[var(--primary)]">11.3 µg</strong> of PM2.5 black carbon soot today.
-            </span>
-          </div>
-          <div className="flex items-center gap-3 font-mono text-[11px] text-[var(--on-surface-variant)]">
-            <span>ATMOSPHERE: <strong className="text-[var(--primary)]">FAVORABLE BREEZE</strong></span>
-            <span>SENSORS: <strong className="text-[var(--on-surface)]">34 ACTIVE</strong></span>
-          </div>
-        </div>
-      </div>
-
-      {/* Route Comparison Matrix: 3 Cards Side-by-Side */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* CARD A: Lowest Exposure (RECOMMENDED) */}
-        <div
-          onClick={() => setSelectedRoute("clean")}
-          className={cn(
-            "cursor-pointer group relative bg-[var(--surface-container)] rounded-2xl p-6 shadow-xl transition-all border flex flex-col justify-between overflow-hidden",
-            selectedRoute === "clean"
-              ? "border-[var(--primary)] ring-2 ring-[var(--primary)] shadow-[0_0_32px_rgba(16,185,129,0.25)]"
-              : "border-white/[0.06] hover:border-white/[0.15]"
-          )}
-        >
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[var(--primary)] via-[var(--primary-fixed)] to-[var(--primary)]" />
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <span className="px-2.5 py-0.5 rounded-full bg-[var(--primary)]/20 text-[var(--primary)] font-mono text-[10px] font-bold flex items-center gap-1">
-                <Leaf className="w-3 h-3" /> RECOMMENDED
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-[var(--surface-container-highest)] text-[var(--tertiary)] font-mono text-[10px]">
-                Lowest Smog ✨
-              </span>
-            </div>
-
-            <h3 className="font-heading text-lg font-bold text-[var(--on-surface)] flex items-center justify-between">
-              <span>The Clean Green Way 🌿</span>
-              {selectedRoute === "clean" && <CheckCircle className="w-5 h-5 text-[var(--primary)]" />}
-            </h3>
-            <p className="text-xs text-[var(--on-surface-variant)] mt-1">
-              Waterfront Greenway route via East River State Park canopy
-            </p>
-
-            <div className="my-5 grid grid-cols-2 gap-3 bg-[var(--surface-container-lowest)]/80 border border-white/[0.04] rounded-xl p-4">
-              <div>
-                <span className="font-mono text-[10px] text-[var(--on-surface-variant)] block uppercase">
-                  Travel Time
-                </span>
-                <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="font-mono text-3xl font-bold text-[var(--on-surface)]">28</span>
-                  <span className="text-xs text-[var(--on-surface-variant)]">mins</span>
-                </div>
+        {/* Map + Summary */}
+        <div className="xl:col-span-7 flex flex-col gap-5">
+          {/* Stylized Map Placeholder */}
+          <Card className="border-gray-200 shadow-sm overflow-hidden">
+            <div className="relative w-full h-72 bg-gradient-to-br from-slate-100 to-blue-50 flex items-center justify-center">
+              {/* Grid lines */}
+              <div className="absolute inset-0 opacity-20">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="absolute border-gray-300" style={{ top: `${i * 12.5}%`, left: 0, right: 0, borderTopWidth: 1 }} />
+                ))}
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="absolute border-gray-300" style={{ left: `${i * 10}%`, top: 0, bottom: 0, borderLeftWidth: 1 }} />
+                ))}
               </div>
-              <div>
-                <span className="font-mono text-[10px] text-[var(--primary)] block uppercase">
-                  Inhaled Dose
-                </span>
-                <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="font-mono text-3xl font-bold text-[var(--primary)]">3.2</span>
-                  <span className="text-xs text-[var(--primary)]">µg</span>
-                </div>
-                <span className="font-mono text-[10px] text-[var(--primary)] block mt-0.5">
-                  🛡️ 64% less pollution
-                </span>
-              </div>
-            </div>
 
-            <div className="space-y-2 text-xs text-[var(--on-surface)]">
-              <div className="flex items-start gap-2">
-                <span className="text-[var(--primary)] font-bold">✓</span>
-                <span>Protected bike paths with dense green tree canopy</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-[var(--primary)] font-bold">✓</span>
-                <span>East River coastal updraft continuously disperses PM2.5</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 mt-4 border-t border-white/[0.04] flex items-center justify-between font-mono text-xs">
-            <span className="text-[var(--primary)] font-semibold">Active Selection</span>
-            <button className="px-3.5 py-1.5 rounded-lg bg-[var(--primary-container)] text-[var(--on-primary-container)] font-semibold">
-              Select Clean
-            </button>
-          </div>
-        </div>
-
-        {/* CARD B: Balanced Route */}
-        <div
-          onClick={() => setSelectedRoute("balanced")}
-          className={cn(
-            "cursor-pointer group relative bg-[var(--surface-container)] rounded-2xl p-6 shadow-xl transition-all border flex flex-col justify-between overflow-hidden",
-            selectedRoute === "balanced"
-              ? "border-[var(--tertiary)] ring-2 ring-[var(--tertiary)] shadow-[0_0_24px_rgba(208,188,255,0.2)]"
-              : "border-white/[0.06] hover:border-white/[0.15]"
-          )}
-        >
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[var(--tertiary-container)] via-[var(--tertiary)] to-[var(--tertiary)]" />
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <span className="px-2.5 py-0.5 rounded-full bg-[var(--tertiary)]/15 text-[var(--tertiary)] font-mono text-[10px] flex items-center gap-1">
-                <Scale className="w-3 h-3" /> BALANCED PATH
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-[var(--surface-container-highest)] text-[var(--on-surface-variant)] font-mono text-[10px]">
-                Modest Compromise
-              </span>
-            </div>
-
-            <h3 className="font-heading text-lg font-bold text-[var(--on-surface)] flex items-center justify-between">
-              <span>Balanced Route ⚖️</span>
-              {selectedRoute === "balanced" && <CheckCircle className="w-5 h-5 text-[var(--tertiary)]" />}
-            </h3>
-            <p className="text-xs text-[var(--on-surface-variant)] mt-1">
-              Side streets & direct Williamsburg Bridge crossing
-            </p>
-
-            <div className="my-5 grid grid-cols-2 gap-3 bg-[var(--surface-container-lowest)]/80 border border-white/[0.04] rounded-xl p-4">
-              <div>
-                <span className="font-mono text-[10px] text-[var(--on-surface-variant)] block uppercase">
-                  Travel Time
-                </span>
-                <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="font-mono text-3xl font-bold text-[var(--on-surface)]">22</span>
-                  <span className="text-xs text-[var(--on-surface-variant)]">mins</span>
-                </div>
-              </div>
-              <div>
-                <span className="font-mono text-[10px] text-[var(--tertiary)] block uppercase">
-                  Inhaled Dose
-                </span>
-                <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="font-mono text-3xl font-bold text-[var(--tertiary)]">6.8</span>
-                  <span className="text-xs text-[var(--tertiary)]">µg</span>
-                </div>
-                <span className="font-mono text-[10px] text-[var(--on-surface-variant)] block mt-0.5">
-                  Standard City Average
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-xs text-[var(--on-surface)]">
-              <div className="flex items-start gap-2">
-                <span className="text-[var(--tertiary)] font-bold">•</span>
-                <span>Calmer residential side avenues in North Brooklyn</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-[var(--tertiary)] font-bold">•</span>
-                <span>Short 5-min elevated crossing on cycle bridge</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 mt-4 border-t border-white/[0.04] flex items-center justify-between font-mono text-xs">
-            <span className="text-[var(--on-surface-variant)]">5.1 miles • +5m elev</span>
-            <button className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-container-high)] text-[var(--on-surface)]">
-              Select Balanced
-            </button>
-          </div>
-        </div>
-
-        {/* CARD C: Fastest Route (High Smog Caution) */}
-        <div
-          onClick={() => setSelectedRoute("fast")}
-          className={cn(
-            "cursor-pointer group relative bg-[var(--surface-container)] rounded-2xl p-6 shadow-xl transition-all border flex flex-col justify-between overflow-hidden",
-            selectedRoute === "fast"
-              ? "border-[var(--secondary)] ring-2 ring-[var(--secondary)] shadow-[0_0_28px_rgba(255,180,171,0.25)]"
-              : "border-white/[0.06] hover:border-white/[0.15]"
-          )}
-        >
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[var(--secondary)] via-[var(--error)] to-[var(--secondary)]" />
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <span className="px-2.5 py-0.5 rounded-full bg-[var(--secondary-container)] text-[var(--on-secondary-container)] font-mono text-[10px] font-bold flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" /> HIGH SMOG CAUTION
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-[var(--surface-container-highest)] text-[var(--secondary)] font-mono text-[10px]">
-                -11 mins faster
-              </span>
-            </div>
-
-            <h3 className="font-heading text-lg font-bold text-[var(--on-surface)] flex items-center justify-between">
-              <span>Fastest Route ⚠️</span>
-              {selectedRoute === "fast" && <AlertTriangle className="w-5 h-5 text-[var(--secondary)]" />}
-            </h3>
-            <p className="text-xs text-[var(--on-surface-variant)] mt-1">
-              Direct thoroughfare along BQE Expressway arterial
-            </p>
-
-            <div className="my-5 grid grid-cols-2 gap-3 bg-[var(--surface-container-lowest)]/80 border border-white/[0.04] rounded-xl p-4">
-              <div>
-                <span className="font-mono text-[10px] text-[var(--on-surface-variant)] block uppercase">
-                  Travel Time
-                </span>
-                <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="font-mono text-3xl font-bold text-[var(--on-surface)]">17</span>
-                  <span className="text-xs text-[var(--on-surface-variant)]">mins</span>
-                </div>
-              </div>
-              <div>
-                <span className="font-mono text-[10px] text-[var(--secondary)] block uppercase">
-                  Inhaled Dose
-                </span>
-                <div className="flex items-baseline gap-1 mt-0.5">
-                  <span className="font-mono text-3xl font-bold text-[var(--secondary)]">14.5</span>
-                  <span className="text-xs text-[var(--secondary)]">µg</span>
-                </div>
-                <span className="font-mono text-[10px] text-[var(--secondary)] block mt-0.5">
-                  🚨 4.5x higher soot
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-[var(--secondary-container)]/20 border border-[var(--secondary)]/30 rounded-xl p-3 text-xs text-[var(--on-surface)]">
-              Heavy diesel particulate detected along expressway corridor. N95 mask strongly advised.
-            </div>
-          </div>
-
-          <div className="pt-4 mt-4 border-t border-white/[0.04] flex items-center justify-between font-mono text-xs">
-            <span className="text-[var(--secondary)] font-semibold">High Risk</span>
-            <button className="px-3.5 py-1.5 rounded-lg bg-[var(--surface-container-high)] text-[var(--secondary)]">
-              Select Despite Risk
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Viewport Section: Interactive Map & Turn-by-Turn Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Map Canvas (8 Cols) */}
-        <div className="lg:col-span-8 bg-[var(--surface-container)] border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl flex flex-col">
-          <div className="px-6 py-3 bg-[var(--surface-container-high)]/90 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-3 z-20">
-            <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-[var(--primary)]" />
-              <span className="font-heading text-sm font-semibold text-[var(--on-surface)]">
-                Live Atmospheric Trajectory Overlay
-              </span>
-            </div>
-            <div className="flex items-center gap-2 font-mono text-[10px]">
-              <span className="px-2 py-0.5 rounded-full bg-[var(--primary)]/20 text-[var(--primary)] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]" /> Clean (Green)
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-[var(--tertiary)]/20 text-[var(--tertiary)] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--tertiary)]" /> Balanced (Cyan)
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-[var(--secondary)]/20 text-[var(--secondary)] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--secondary)] animate-pulse" /> Highway Smog (Red)
-              </span>
-            </div>
-          </div>
-
-          {/* SVG Map Canvas */}
-          <div className="relative w-full h-[480px] bg-[var(--surface-container-lowest)] overflow-hidden select-none flex items-center justify-center">
-            {/* Ambient Atmosphere Heatmaps */}
-            <div className="absolute top-[40%] left-[45%] w-72 h-44 bg-[var(--secondary)]/20 rounded-full blur-3xl pointer-events-none animate-pulse" />
-            <div className="absolute top-[20%] left-[20%] w-80 h-72 bg-[var(--primary)]/20 rounded-full blur-3xl pointer-events-none" />
-
-            {/* SVG Vectors for Routes */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" fill="none" viewBox="0 0 800 520">
-              {/* Grid Lines */}
-              <path d="M100 0 V520 M300 0 V520 M500 0 V520 M700 0 V520" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-              <path d="M0 100 H800 M0 260 H800 M0 420 H800" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-
-              {/* ROUTE C: Fast / Red */}
-              <path
-                d="M120 410 Q 280 430 420 330 T 680 140"
-                stroke="#ffb2b7"
-                strokeWidth={selectedRoute === "fast" ? "7" : "3"}
-                opacity={selectedRoute === "fast" ? "1" : "0.35"}
-                strokeDasharray="8 4"
-              />
-
-              {/* ROUTE B: Balanced / Cyan */}
-              <path
-                d="M120 410 C 210 360, 310 260, 480 230 S 610 180, 680 140"
-                stroke="#d0bcff"
-                strokeWidth={selectedRoute === "balanced" ? "7" : "3"}
-                opacity={selectedRoute === "balanced" ? "1" : "0.35"}
-              />
-
-              {/* ROUTE A: Clean / Emerald */}
-              <path
-                d="M120 410 C 160 270, 240 120, 430 110 S 590 90, 680 140"
-                stroke="#4edea3"
-                strokeWidth={selectedRoute === "clean" ? "8" : "3"}
-                opacity={selectedRoute === "clean" ? "1" : "0.4"}
-                strokeLinecap="round"
-              />
-
-              {/* Origin & Destination */}
-              <circle cx="120" cy="410" fill="#10b981" r="10" />
-              <circle cx="680" cy="140" fill="#d0bcff" r="10" />
-            </svg>
-
-            <div className="absolute top-4 left-4 bg-[var(--surface-container-high)]/90 backdrop-blur-md px-3 py-1.5 rounded-lg font-mono text-[10px] text-[var(--on-surface)] border border-white/[0.06]">
-              🌿 GREENPOINT ORIGIN (AQI 38)
-            </div>
-            <div className="absolute bottom-4 right-4 bg-[var(--surface-container-high)]/90 backdrop-blur-md px-3 py-1.5 rounded-lg font-mono text-[10px] text-[var(--on-surface)] border border-white/[0.06]">
-              📍 SOHO DESTINATION (AQI 69)
-            </div>
-          </div>
-
-          {/* Elevation vs Smog Chart Strip */}
-          <div className="p-4 bg-[var(--surface-container-low)] border-t border-white/[0.06] flex flex-col gap-2">
-            <div className="flex items-center justify-between font-mono text-[10px]">
-              <span className="text-[var(--on-surface-variant)] uppercase tracking-wider">
-                Elevation vs Particulate Exposure Cross-Section
-              </span>
-              <div className="flex items-center gap-3">
-                <span className="text-[var(--primary)]">■ Clean Path (avg 3.2µg)</span>
-                <span className="text-[var(--secondary)]">■ Highway Path (avg 14.5µg)</span>
-              </div>
-            </div>
-            <div className="w-full h-16 relative">
-              <svg className="w-full h-full" fill="none" preserveAspectRatio="none" viewBox="0 0 600 70">
-                <path d="M0 65 Q 120 40 250 55 T 450 30 T 600 45 L 600 70 L 0 70 Z" fill="rgba(78,222,163,0.12)" />
-                <path d="M0 65 Q 120 40 250 55 T 450 30 T 600 45" stroke="#4edea3" strokeWidth="2.5" />
-                <path d="M0 60 Q 150 50 300 15 T 480 10 T 600 40" stroke="#ffb4ab" strokeDasharray="4 2" strokeWidth="2" />
+              {/* Route line visualization */}
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 280">
+                <path d="M 60 220 C 120 180 200 150 280 90 S 360 60 380 50"
+                  fill="none" stroke={selectedRoute === "clean" ? "#10b981" : selectedRoute === "balanced" ? "#3b82f6" : "#ef4444"}
+                  strokeWidth="3" strokeDasharray={selectedRoute === "fast" ? "none" : "8 4"}
+                  strokeLinecap="round" className="transition-all duration-500"
+                />
+                <circle cx="60" cy="220" r="7" fill="#1d4ed8" />
+                <circle cx="380" cy="50" r="7" fill="#ef4444" />
               </svg>
-            </div>
-          </div>
-        </div>
 
-        {/* Turn-by-Turn Atmospheric Advisory Panel (4 Cols) */}
-        <div className="lg:col-span-4 flex flex-col gap-5">
-          <div className="bg-[var(--surface-container)] border border-white/[0.08] rounded-2xl p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-heading text-base font-bold text-[var(--on-surface)]">
-                Atmospheric Advisory
-              </h4>
-              <span className="px-2 py-0.5 rounded-full bg-[var(--primary)]/20 text-[var(--primary)] font-mono text-[10px]">
-                Active
-              </span>
-            </div>
-            <p className="text-xs text-[var(--on-surface-variant)]">
-              Real-time micro-climate warnings along your chosen route
-            </p>
-
-            <div className="mt-4 space-y-3">
-              <div className="p-3.5 rounded-xl bg-[var(--surface-container-high)]/80 border border-white/[0.04] flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10px] text-[var(--primary)] font-bold">MILES 1.2 – 1.8</span>
-                  <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-[var(--primary)]/10 text-[var(--primary)]">
-                    AQI 22 • Pristine
-                  </span>
-                </div>
-                <h5 className="font-heading text-xs font-bold text-[var(--on-surface)] mt-1">
-                  East River Waterfront Span
-                </h5>
-                <p className="text-[11px] text-[var(--on-surface-variant)]">
-                  Bridge crossing has clean sea breeze. Inhale deeply here — optimal zone for aerobic pace.
-                </p>
+              <div className="relative flex flex-col items-center text-center gap-1">
+                <Navigation className="w-8 h-8 text-blue-300" />
+                <span className="text-sm text-gray-400 font-medium">Route visualization</span>
+                <span className="text-xs text-gray-400">MapLibre GL integration pending</span>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-[var(--surface-container-high)]/80 border border-white/[0.04] flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10px] text-[var(--secondary)] font-bold">MILES 2.1</span>
-                  <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-[var(--secondary-container)] text-[var(--on-secondary-container)]">
-                    AQI 118 • Idling
-                  </span>
-                </div>
-                <h5 className="font-heading text-xs font-bold text-[var(--on-surface)] mt-1">
-                  Canal & Bowery Intersection
-                </h5>
-                <p className="text-[11px] text-[var(--on-surface-variant)]">
-                  Put on mask or take Canal St bypass to avoid diesel idling. Auto-rerouted 1 block north.
-                </p>
+              <div className="absolute bottom-3 left-3 flex items-center gap-2 text-xs bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border border-gray-200 shadow-sm">
+                <span className="w-2 h-2 rounded-full" style={{ background: selectedRoute === "clean" ? "#10b981" : selectedRoute === "balanced" ? "#3b82f6" : "#ef4444" }} />
+                <span className="font-medium text-gray-700">{active.label}</span>
               </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Gamification Widget */}
-          <div className="bg-[var(--surface-container)] border border-white/[0.08] rounded-2xl p-5 shadow-xl flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-[var(--primary)]/20 border border-[var(--primary)]/40 flex items-center justify-center text-2xl shrink-0">
-              🏅
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[10px] text-[var(--primary)] font-bold uppercase">
-                  Weekly Lung Shield
-                </span>
-                <span className="font-mono text-[10px] text-[var(--on-surface)] font-semibold">+420 XP</span>
+          {/* Route Summary */}
+          <Card className="border-gray-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Selected Route Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                {[
+                  { label: "Travel Time", value: active.time, icon: "⏱" },
+                  { label: "Exposure Score", value: `${active.exposure} pts`, icon: "💨" },
+                  { label: "Reduction", value: active.saving === "—" ? "Baseline" : active.saving, icon: "📉" },
+                ].map((stat) => (
+                  <div key={stat.label} className="text-center p-3 rounded-xl bg-gray-50 border border-gray-100">
+                    <div className="text-xl mb-1">{stat.icon}</div>
+                    <div className="font-mono font-bold text-gray-900 text-sm">{stat.value}</div>
+                    <div className="text-[10px] text-gray-400">{stat.label}</div>
+                  </div>
+                ))}
               </div>
-              <div className="font-heading text-sm font-bold text-[var(--on-surface)] mt-0.5">
-                Level 7 Clean Navigator
-              </div>
-              <div className="w-full bg-[var(--surface-container-highest)] h-1.5 rounded-full mt-2 overflow-hidden">
-                <div className="bg-[var(--primary)] h-full rounded-full w-[78%]" />
-              </div>
-              <span className="text-[10px] text-[var(--on-surface-variant)] block mt-1 font-mono">
-                112 µg cumulative soot diverted this month!
-              </span>
-            </div>
-          </div>
 
-          {/* Start Navigation CTA */}
-          <button
-            onClick={() => {
-              setNavigating(true);
-              setTimeout(() => setNavigating(false), 3000);
-            }}
-            className="w-full py-4 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] font-heading text-sm font-bold flex items-center justify-center gap-2 shadow-xl hover:brightness-105 transition-all cursor-pointer font-mono"
-          >
-            <Navigation className="w-4 h-4" />
-            <span>{navigating ? "Navigation Active in Background..." : "Start Navigation along Clean Path"}</span>
-          </button>
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 text-sm text-blue-800">
+                <strong>Recommendation:</strong> {selectedRoute === "fast"
+                  ? "This route maximizes speed but exposes you to high truck traffic pollution. Consider the balanced route."
+                  : selectedRoute === "balanced"
+                  ? "Great choice — only 4 extra minutes saves 36% of inhaled PM2.5 versus the fastest route."
+                  : "Optimal for low exposure. Takes 7 extra minutes but cuts inhaled dose by half."}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
