@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useAirTelemetry } from "@/hooks/use-air-telemetry";
 
 interface LocationOption {
   name: string; city: string; aqi: number; status: string; statusColor: string;
@@ -80,14 +81,33 @@ const ROUTE_SHORTCUTS = [
 ];
 
 export function DashboardView() {
-  const [selectedLoc, setSelectedLoc] = useState<LocationOption>(LOCATIONS[0]);
+  const { telemetry, loading, isUsingLiveLocation, refetch } = useAirTelemetry();
+  const [selectedPreset, setSelectedPreset] = useState<LocationOption | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Active display data: prefer live telemetry if no preset override is selected
+  const activeData: LocationOption = selectedPreset || (telemetry ? {
+    name: isUsingLiveLocation ? "Your Location (Live GPS)" : "Live Telemetry Station",
+    city: isUsingLiveLocation ? "Live Location (GPS)" : "Live Station",
+    aqi: telemetry.aqi,
+    status: telemetry.status,
+    statusColor: telemetry.statusColor,
+    headline: telemetry.headline,
+    subtext: telemetry.subtext,
+    pm25: telemetry.pm25,
+    pm10: telemetry.pm10,
+    o3: telemetry.o3,
+    temp: telemetry.temp,
+    humidity: telemetry.humidity,
+    wind: telemetry.wind,
+    uv: telemetry.uv,
+  } : LOCATIONS[0]);
 
   const maxAqi = 150;
   const circumference = 427.2;
-  const progressRatio = Math.min(selectedLoc.aqi / maxAqi, 1);
+  const progressRatio = Math.min(activeData.aqi / maxAqi, 1);
   const strokeDashoffset = circumference * (1 - progressRatio);
-  const strokeColor = selectedLoc.aqi <= 50 ? "#10b981" : selectedLoc.aqi <= 100 ? "#f59e0b" : "#ef4444";
+  const strokeColor = activeData.aqi <= 50 ? "#10b981" : activeData.aqi <= 100 ? "#f59e0b" : "#ef4444";
 
   return (
     <div className="w-full flex flex-col gap-6 animate-fade-up">
@@ -104,9 +124,11 @@ export function DashboardView() {
               <MapPin className="w-4 h-4 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Active Location</span>
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">
+                {isUsingLiveLocation && !selectedPreset ? "📍 GPS Live" : "Active Location"}
+              </span>
               <span className="text-sm font-semibold text-gray-900 flex items-center gap-1">
-                {selectedLoc.city}
+                {activeData.city}
                 <ChevronDown className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600" />
               </span>
             </div>
@@ -115,13 +137,35 @@ export function DashboardView() {
           {dropdownOpen && (
             <div className="absolute top-full left-0 mt-2 w-72 rounded-xl bg-white border border-gray-200 shadow-xl p-2 z-40 animate-fade-up">
               <p className="px-3 py-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-medium">Switch Station</p>
+              
+              {/* Option for Live Device Location */}
+              <button
+                onClick={() => { setSelectedPreset(null); setDropdownOpen(false); refetch(); }}
+                className={cn(
+                  "w-full text-left px-3 py-2 rounded-lg transition-all flex items-center justify-between text-sm cursor-pointer mb-1 border-b border-gray-100",
+                  !selectedPreset
+                    ? "bg-blue-50 text-blue-700 font-medium"
+                    : "hover:bg-gray-50 text-gray-700"
+                )}
+              >
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                  Live GPS Location
+                </span>
+                {telemetry && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                    AQI {telemetry.aqi}
+                  </span>
+                )}
+              </button>
+
               {LOCATIONS.map((loc) => (
                 <button
                   key={loc.name}
-                  onClick={() => { setSelectedLoc(loc); setDropdownOpen(false); }}
+                  onClick={() => { setSelectedPreset(loc); setDropdownOpen(false); }}
                   className={cn(
                     "w-full text-left px-3 py-2 rounded-lg transition-all flex items-center justify-between text-sm cursor-pointer",
-                    selectedLoc.name === loc.name
+                    selectedPreset?.name === loc.name
                       ? "bg-blue-50 text-blue-700 font-medium"
                       : "hover:bg-gray-50 text-gray-700"
                   )}
@@ -139,14 +183,17 @@ export function DashboardView() {
         {/* Freshness badge */}
         <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-gray-200 shadow-sm text-sm">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-gray-500">Updated <strong className="text-gray-900">2m ago</strong></span>
+          <span className="text-gray-500">
+            {loading ? "Syncing Open-Meteo..." : "Live Open-Meteo Stream"}
+          </span>
           <Separator orientation="vertical" className="h-4" />
           <span className="text-gray-500">EPA Ground + Sentinel-5P</span>
           <button
-            onClick={() => setSelectedLoc({ ...selectedLoc })}
-            className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+            onClick={() => refetch()}
+            className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
+            title="Refresh live telemetry"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className={cn("w-3.5 h-3.5", loading && "animate-spin text-blue-600")} />
           </button>
         </div>
       </section>
@@ -178,12 +225,12 @@ export function DashboardView() {
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                     <span className="text-[10px] text-gray-400 uppercase tracking-wider">Real-time AQI</span>
                     <span className="font-mono text-5xl font-bold leading-none tracking-tight" style={{ color: strokeColor }}>
-                      {selectedLoc.aqi}
+                      {activeData.aqi}
                     </span>
                     <span className={cn("text-xs font-semibold mt-1 px-2.5 py-0.5 rounded-full",
-                      selectedLoc.statusColor === "good" ? "status-good" : "status-moderate"
+                      activeData.statusColor === "good" ? "status-good" : "status-moderate"
                     )}>
-                      {selectedLoc.status}
+                      {activeData.status}
                     </span>
                   </div>
                 </div>
@@ -191,23 +238,25 @@ export function DashboardView() {
                 {/* Verdict */}
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <Badge className={selectedLoc.statusColor === "good" ? "status-good border-0" : "status-moderate border-0"}>
-                      ● {selectedLoc.status} Air Quality
+                    <Badge className={activeData.statusColor === "good" ? "status-good border-0" : "status-moderate border-0"}>
+                      ● {activeData.status} Air Quality
                     </Badge>
-                    <Badge variant="secondary" className="font-mono text-[10px]">PM2.5 Safe</Badge>
+                    <Badge variant="secondary" className="font-mono text-[10px]">
+                      PM2.5 {activeData.pm25 <= 12 ? "Safe" : "Elevated"}
+                    </Badge>
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-1">{selectedLoc.headline}</h2>
-                  <p className="text-sm text-gray-500 leading-relaxed">{selectedLoc.subtext}</p>
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">{activeData.headline}</h2>
+                  <p className="text-sm text-gray-500 leading-relaxed">{activeData.subtext}</p>
 
                   {/* Weather row */}
                   <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-600 pt-4 border-t border-gray-100">
-                    <div className="flex items-center gap-1.5"><Thermometer className="w-4 h-4 text-blue-500" /><span>{selectedLoc.temp}</span></div>
+                    <div className="flex items-center gap-1.5"><Thermometer className="w-4 h-4 text-blue-500" /><span>{activeData.temp}</span></div>
                     <Separator orientation="vertical" className="h-4" />
-                    <div className="flex items-center gap-1.5"><Droplets className="w-4 h-4 text-blue-400" /><span>{selectedLoc.humidity}</span></div>
+                    <div className="flex items-center gap-1.5"><Droplets className="w-4 h-4 text-blue-400" /><span>{activeData.humidity}</span></div>
                     <Separator orientation="vertical" className="h-4" />
-                    <div className="flex items-center gap-1.5"><Wind className="w-4 h-4 text-gray-400" /><span>{selectedLoc.wind}</span></div>
+                    <div className="flex items-center gap-1.5"><Wind className="w-4 h-4 text-gray-400" /><span>{activeData.wind}</span></div>
                     <Separator orientation="vertical" className="h-4" />
-                    <div className="flex items-center gap-1.5"><Sun className="w-4 h-4 text-amber-500" /><span>{selectedLoc.uv}</span></div>
+                    <div className="flex items-center gap-1.5"><Sun className="w-4 h-4 text-amber-500" /><span>{activeData.uv}</span></div>
                   </div>
                 </div>
               </div>
@@ -248,15 +297,15 @@ export function DashboardView() {
                   <BarChart3 className="w-4 h-4 text-blue-600" />
                   Live Molecular Fingerprint
                 </CardTitle>
-                <span className="text-[10px] text-gray-400 uppercase tracking-wider font-mono">EPA Sensors</span>
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider font-mono">Open-Meteo & EPA</span>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  { label: "PM 2.5", unit: "µg/m³", value: selectedLoc.pm25, max: 25, badge: "WHO Tier 1", color: "#10b981", desc: "Fine particles — clear" },
-                  { label: "PM 10",  unit: "µg/m³", value: selectedLoc.pm10, max: 50, badge: "Ultra Low",  color: "#10b981", desc: "Coarse dust — minimal" },
-                  { label: "O₃",     unit: "ppb",   value: selectedLoc.o3,   max: 70, badge: "Safe",       color: "#8b5cf6", desc: "Ground ozone — safe ceiling" },
+                  { label: "PM 2.5", unit: "µg/m³", value: activeData.pm25, max: 25, badge: activeData.pm25 <= 12 ? "WHO Tier 1" : "Elevated", color: activeData.pm25 <= 12 ? "#10b981" : "#f59e0b", desc: "Fine particles — inhalable" },
+                  { label: "PM 10",  unit: "µg/m³", value: activeData.pm10, max: 50, badge: activeData.pm10 <= 45 ? "Safe" : "Elevated",  color: activeData.pm10 <= 45 ? "#10b981" : "#f59e0b", desc: "Coarse dust & pollutants" },
+                  { label: "O₃",     unit: "µg/m³", value: activeData.o3,   max: 70, badge: activeData.o3 <= 60 ? "Safe" : "Moderate", color: "#8b5cf6", desc: "Ground ozone — photochemical" },
                 ].map((pol) => (
                   <div key={pol.label} className="p-4 rounded-xl bg-gray-50 border border-gray-100">
                     <div className="flex items-center justify-between mb-2">
@@ -291,7 +340,7 @@ export function DashboardView() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-2">
-                {FORECAST.map((slot) => (
+                {(telemetry?.forecast && !selectedPreset ? telemetry.forecast : FORECAST).map((slot) => (
                   <div key={slot.time} className={cn("flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
                     slot.time === "Now" ? "bg-blue-50 border border-blue-100" : "hover:bg-gray-50"
                   )}>
@@ -299,7 +348,7 @@ export function DashboardView() {
                     <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all"
-                        style={{ width: `${(slot.aqi / 100) * 100}%`, background: slot.aqi <= 50 ? "#10b981" : "#f59e0b" }}
+                        style={{ width: `${Math.min((slot.aqi / 100) * 100, 100)}%`, background: slot.aqi <= 50 ? "#10b981" : "#f59e0b" }}
                       />
                     </div>
                     <span className={cn("text-xs font-semibold font-mono w-6 text-right", slot.color)}>{slot.aqi}</span>

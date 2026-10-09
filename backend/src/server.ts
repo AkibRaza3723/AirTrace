@@ -1,6 +1,6 @@
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
-import { prisma } from "./lib/prisma.js";
+import { prisma } from "./lib/dbconnect.js";
 import { logger } from "./utils/logger.js";
 
 const app = createApp();
