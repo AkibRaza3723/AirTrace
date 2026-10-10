@@ -21,3 +21,15 @@ yarn-error.log*
 .env
 .env*.local
 *.env
+
+# python 
+.venv/
+venv/
+env/
+**/.venv/
+**/venv/
+pycache/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
