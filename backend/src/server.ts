@@ -7,8 +7,6 @@ const app = createApp();
 
 const server = app.listen(env.PORT, () => {
   logger.info(`🚀 AirTrace Backend API is running on http://localhost:${env.PORT}`);
-  logger.info(`🔐 Better Auth endpoint active at http://localhost:${env.PORT}/api/auth`);
-  logger.info(`🌐 Allowed Frontend Origin: ${env.FRONTEND_URL}`);
 });
 
 // Graceful shutdown handling
@@ -26,5 +24,5 @@ async function shutdown(signal: string) {
   });
 }
 
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGTERM", () => shutdown("SIGTERM")); 
 process.on("SIGINT", () => shutdown("SIGINT"));

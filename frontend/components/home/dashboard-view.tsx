@@ -168,35 +168,35 @@ export function DashboardView() {
   const getDynamicActions = (aqi: number) => {
     if (aqi <= 50) {
       return [
-        { icon: "🏃", title: "Outdoor Workout", badge: "Approved", badgeClass: "bg-emerald-100 text-emerald-700", desc: "Clean atmospheric air. Peak cardiovascular running, sports, and cycling fully approved.", cta: "Safe for High HR", href: "/exposure" },
-        { icon: "🪟", title: "Ventilate Indoors", badge: "Recommended", badgeClass: "bg-blue-100 text-blue-700", desc: "Open windows to flush out indoor carbon dioxide with fresh ambient air.", cta: "Natural Aeration", href: "/exposure" },
+        { icon: "🏃", title: "Outdoor Workout", badge: "Approved", badgeClass: "bg-emerald-100 text-emerald-700", desc: "Clean atmospheric air. Peak cardiovascular running, sports, and cycling fully approved.", cta: "Safe for High HR", href: "/assistant" },
+        { icon: "🪟", title: "Ventilate Indoors", badge: "Recommended", badgeClass: "bg-blue-100 text-blue-700", desc: "Open windows to flush out indoor carbon dioxide with fresh ambient air.", cta: "Natural Aeration", href: "/assistant" },
         { icon: "😷", title: "Mask Status", badge: "Not Required", badgeClass: "bg-gray-100 text-gray-600", desc: "Particulate filtration unnecessary. Air quality meets Clean Air goals.", cta: "No Protection Needed", href: "/assistant" },
       ];
     }
     if (aqi <= 100) {
       return [
-        { icon: "🏃", title: "Outdoor Workout", badge: "Approved", badgeClass: "bg-green-100 text-green-700", desc: "Minor breathing discomfort to sensitive individuals only. Standard workouts approved.", cta: "Normal Intensity", href: "/exposure" },
-        { icon: "🪟", title: "Ventilate Indoors", badge: "Approved", badgeClass: "bg-blue-100 text-blue-700", desc: "Normal ventilation acceptable. Avoid peak highway commute hours.", cta: "Moderate Flush", href: "/exposure" },
+        { icon: "🏃", title: "Outdoor Workout", badge: "Approved", badgeClass: "bg-green-100 text-green-700", desc: "Minor breathing discomfort to sensitive individuals only. Standard workouts approved.", cta: "Normal Intensity", href: "/assistant" },
+        { icon: "🪟", title: "Ventilate Indoors", badge: "Approved", badgeClass: "bg-blue-100 text-blue-700", desc: "Normal ventilation acceptable. Avoid peak highway commute hours.", cta: "Moderate Flush", href: "/assistant" },
         { icon: "😷", title: "Mask Status", badge: "Optional", badgeClass: "bg-gray-100 text-gray-600", desc: "Sensitive persons with chronic asthma may consider lightweight filtration.", cta: "Optional for Sensitive", href: "/assistant" },
       ];
     }
     if (aqi <= 200) {
       return [
-        { icon: "🏃", title: "Outdoor Workout", badge: "Caution", badgeClass: "bg-amber-100 text-amber-700", desc: "Moderate exertion. Reduce high-intensity interval drills; asthmatics should train indoors.", cta: "Moderate PE Only", href: "/exposure" },
-        { icon: "🪟", title: "Ventilate Indoors", badge: "Selective", badgeClass: "bg-amber-100 text-amber-700", desc: "Ventilate briefly during afternoon sun when ground inversions lift.", cta: "Controlled Aeration", href: "/exposure" },
+        { icon: "🏃", title: "Outdoor Workout", badge: "Caution", badgeClass: "bg-amber-100 text-amber-700", desc: "Moderate exertion. Reduce high-intensity interval drills; asthmatics should train indoors.", cta: "Moderate PE Only", href: "/assistant" },
+        { icon: "🪟", title: "Ventilate Indoors", badge: "Selective", badgeClass: "bg-amber-100 text-amber-700", desc: "Ventilate briefly during afternoon sun when ground inversions lift.", cta: "Controlled Aeration", href: "/assistant" },
         { icon: "😷", title: "Mask Status", badge: "Sensitive Groups", badgeClass: "bg-amber-100 text-amber-700", desc: "Asthmatics and elderly should wear particulate masks during transit.", cta: "N95 for Sensitive", href: "/assistant" },
       ];
     }
     if (aqi <= 300) {
       return [
-        { icon: "🏃", title: "Outdoor Workout", badge: "Restrict", badgeClass: "bg-orange-100 text-orange-700", desc: "Poor air quality. Relocate athletics and sports into indoor gymnasiums.", cta: "Move Training Indoors", href: "/exposure" },
-        { icon: "🪟", title: "Ventilate Indoors", badge: "Seal Windows", badgeClass: "bg-orange-100 text-orange-700", desc: "Keep windows shut. Turn on indoor HEPA filtration to clear particulates.", cta: "Run HEPA Purifier", href: "/exposure" },
+        { icon: "🏃", title: "Outdoor Workout", badge: "Restrict", badgeClass: "bg-orange-100 text-orange-700", desc: "Poor air quality. Relocate athletics and sports into indoor gymnasiums.", cta: "Move Training Indoors", href: "/assistant" },
+        { icon: "🪟", title: "Ventilate Indoors", badge: "Seal Windows", badgeClass: "bg-orange-100 text-orange-700", desc: "Keep windows shut. Turn on indoor HEPA filtration to clear particulates.", cta: "Run HEPA Purifier", href: "/assistant" },
         { icon: "😷", title: "Mask Status", badge: "Recommended", badgeClass: "bg-orange-100 text-orange-700", desc: "N95 / FFP2 particulate mask advised for outdoor campus and street transit.", cta: "Wear N95 Filter", href: "/assistant" },
       ];
     }
     return [
-      { icon: "🏃", title: "Outdoor Workout", badge: "Suspended", badgeClass: "bg-red-200 text-red-800", desc: "Very Poor / Severe conditions. All outdoor cardiovascular athletics suspended under GRAP.", cta: "Indoor Only", href: "/exposure" },
-      { icon: "🪟", title: "Ventilate Indoors", badge: "Seal & Purify", badgeClass: "bg-red-200 text-red-800", desc: "Seal entryways. Operate HEPA air purifiers continuously on recirculate mode.", cta: "Continuous HEPA", href: "/exposure" },
+      { icon: "🏃", title: "Outdoor Workout", badge: "Suspended", badgeClass: "bg-red-200 text-red-800", desc: "Very Poor / Severe conditions. All outdoor cardiovascular athletics suspended under GRAP.", cta: "Indoor Only", href: "/assistant" },
+      { icon: "🪟", title: "Ventilate Indoors", badge: "Seal & Purify", badgeClass: "bg-red-200 text-red-800", desc: "Seal entryways. Operate HEPA air purifiers continuously on recirculate mode.", cta: "Continuous HEPA", href: "/assistant" },
       { icon: "😷", title: "Mask Status", badge: "Mandatory N95", badgeClass: "bg-red-200 text-red-800", desc: "Mandatory particulate respirator (N95/FFP2) when stepping outdoors.", cta: "Tight Seal N95", href: "/assistant" },
     ];
   };

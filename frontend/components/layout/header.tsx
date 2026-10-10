@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Wind, LogOut, ChevronDown, UserCircle2, Building2,
-  ShieldCheck, KeyRound, Sparkles
+  KeyRound, Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import { useAirTelemetry } from "@/hooks/use-air-telemetry";
 
 const NAV_ITEMS = [
   { label: "Dashboard",     href: "/dashboard" },
-  { label: "Exposure",      href: "/exposure" },
   { label: "Route Planner", href: "/route" },
   { label: "Campus Safety", href: "/schools" },
   { label: "AI Assistant",  href: "/assistant" },
@@ -176,14 +175,6 @@ export function Header() {
                     >
                       <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                       Dashboard
-                    </Link>
-                    <Link
-                      href="/exposure"
-                      onClick={() => setDropdownOpen(false)}
-                      className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors font-medium"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                      Exposure Assessment
                     </Link>
                   </div>
 
