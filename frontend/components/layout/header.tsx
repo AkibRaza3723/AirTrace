@@ -119,11 +119,11 @@ export function Header() {
                   <span className="text-xs font-bold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors">
                     {user.name}
                   </span>
-                  <span className="text-[10px] text-gray-500 leading-tight">
-                    {user.role}
+                  <span className="text-[10px] text-gray-500 leading-tight font-medium">
+                    {user.profession === "STUDENT" ? "🎓 Student" : "💼 Professional"}
                   </span>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-xs font-bold text-white shadow-sm ring-2 ring-transparent group-hover:ring-blue-400/40 transition-all">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-xs font-bold text-white shadow-xs ring-2 ring-transparent group-hover:ring-blue-400/40 transition-all">
                   {user.name.slice(0, 2).toUpperCase()}
                 </div>
                 <ChevronDown className={cn("w-3.5 h-3.5 text-gray-400 transition-transform", dropdownOpen && "rotate-180")} />
@@ -131,37 +131,47 @@ export function Header() {
 
               {/* User Dropdown Menu */}
               {dropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 animate-fade-up">
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-fade-up">
                   
                   {/* User Profile Header in Dropdown */}
                   <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                      <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                         {user.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-gray-900 text-xs truncate">{user.name}</p>
                         <p className="text-[11px] text-gray-500 truncate">{user.email}</p>
+                        <span className="inline-block mt-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-700">
+                          {user.profession === "STUDENT" ? "🎓 STUDENT" : "💼 PROFESSIONAL"}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Institution Details */}
+                  {/* Institution Details or Professional Location */}
                   <div className="px-4 py-2.5 space-y-1.5 text-xs text-gray-600 border-b border-gray-100">
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Building2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                      <span className="font-medium truncate">{user.college}</span>
-                    </div>
-                    {user.studentId && (
-                      <div className="flex items-center gap-2 text-gray-500 text-[11px]">
-                        <UserCircle2 className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                        <span>ID: <strong className="font-mono text-gray-700">{user.studentId}</strong></span>
-                      </div>
-                    )}
-                    {user.deanAuthId && (
-                      <div className="flex items-center gap-2 text-[11px] text-emerald-700">
-                        <KeyRound className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>Dean Code: <strong className="font-mono">{user.deanAuthId}</strong></span>
+                    {user.profession === "STUDENT" ? (
+                      <>
+                        <div className="flex items-center gap-2 text-gray-700">
+                          <Building2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          <span className="font-semibold truncate">{user.campusProfile?.campusName || user.college}</span>
+                        </div>
+                        {user.campusProfile && (
+                          <div className="flex items-center gap-2 text-gray-400 text-[10px] font-mono">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span>
+                              {user.campusProfile.campusLatitude.toFixed(3)}°N, {user.campusProfile.campusLongitude.toFixed(3)}°E
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <span className="text-xs">📍</span>
+                        <span className="font-medium truncate">
+                          {user.preferredAddress || "City Workspace (No location set)"}
+                        </span>
                       </div>
                     )}
                   </div>

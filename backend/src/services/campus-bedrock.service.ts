@@ -185,11 +185,9 @@ Please give a comprehensive, authoritative, and direct answer based on the real-
             modelId: env.OPENAI_MODEL || "gpt-4o-mini",
           };
         }
-      } else {
-        console.warn(`OpenAI Campus Advisor returned HTTP ${res.status}. Falling back.`);
       }
-    } catch (err: any) {
-      console.warn("OpenAI Campus Advisor call failed:", err?.message || err);
+    } catch {
+      // Fallback silently to secondary provider
     }
   }
 
@@ -226,8 +224,8 @@ Please give a comprehensive, authoritative, and direct answer based on the real-
           modelId,
         };
       }
-    } catch (error: any) {
-      console.warn("Bedrock explanation call failed, falling back to deterministic explanation:", error.message);
+    } catch {
+      // Fallback silently to deterministic heuristic
     }
   }
 

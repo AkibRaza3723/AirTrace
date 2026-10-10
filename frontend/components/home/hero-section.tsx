@@ -12,12 +12,7 @@ import { useAuth } from "@/lib/auth-context";
 
 export function HeroSection() {
   const router = useRouter();
-  const { user, demoLogin } = useAuth();
-
-  const handleDemo = () => {
-    demoLogin();
-    router.push("/dashboard");
-  };
+  const { user } = useAuth();
 
   return (
     <div className="w-full flex flex-col gap-12 pb-12">
@@ -60,25 +55,26 @@ export function HeroSection() {
             </Link>
           ) : (
             <>
-              <Link href="/auth">
+              <Link href="/auth?mode=signup">
                 <Button
                   size="lg"
-                  className="rounded-xl px-7 py-6 text-sm sm:text-base font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-blue-500/25 transition-all gap-2 group"
+                  className="rounded-xl px-7 py-6 text-sm sm:text-base font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-blue-500/25 transition-all gap-2 group cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-blue-200 group-hover:rotate-12 transition-transform" />
-                  Sign Up & Verify Access
+                  Sign Up & Get Started
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
 
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={handleDemo}
-                className="rounded-xl px-6 py-6 text-sm sm:text-base font-semibold border-gray-300 hover:bg-gray-100/80 text-gray-700 transition-all gap-2"
-              >
-                Explore Live Demo <ChevronRight className="w-4 h-4 text-gray-400" />
-              </Button>
+              <Link href="/auth?mode=login">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="rounded-xl px-6 py-6 text-sm sm:text-base font-semibold border-gray-300 hover:bg-gray-100/80 text-gray-700 transition-all gap-2 cursor-pointer"
+                >
+                  Log In to Account <ChevronRight className="w-4 h-4 text-gray-400" />
+                </Button>
+              </Link>
             </>
           )}
         </div>

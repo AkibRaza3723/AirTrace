@@ -51,9 +51,8 @@ export function useAirTelemetry() {
     try {
       const res = await fetch(`${BACKEND_URL}/api/aqi/stations`);
       const json = await res.json();
-      if (json.success && Array.isArray(json.data)) setStations(json.data);
-    } catch (e) {
-      console.warn("Failed to fetch Delhi stations:", e);
+    } catch {
+      // Station fetch fallback silently
     }
   }, []);
 
@@ -72,7 +71,6 @@ export function useAirTelemetry() {
         throw new Error(json.error || "Failed to load telemetry");
       }
     } catch (err: any) {
-      console.warn("Failed to fetch live air telemetry from backend:", err.message);
       setError(err.message || "Could not retrieve air quality telemetry");
     } finally {
       setLoading(false);

@@ -1,10 +1,6 @@
 export const logger = {
-  info: (msg: string, ...args: any[]) => console.log(`[INFO] ${new Date().toISOString()} - ${msg}`, ...args),
-  warn: (msg: string, ...args: any[]) => console.warn(`[WARN] ${new Date().toISOString()} - ${msg}`, ...args),
-  error: (msg: string, ...args: any[]) => console.error(`[ERROR] ${new Date().toISOString()} - ${msg}`, ...args),
-  debug: (msg: string, ...args: any[]) => {
-    if (process.env.NODE_ENV !== "production") {
-      console.debug(`[DEBUG] ${new Date().toISOString()} - ${msg}`, ...args);
-    }
-  },
+  info: (_msg: string, ..._args: any[]) => {},
+  warn: (_msg: string, ..._args: any[]) => {},
+  error: (msg: string, ...args: any[]) => console.error(`[ERROR] ${msg}`, ...args),
+  debug: (_msg: string, ..._args: any[]) => {},
 };

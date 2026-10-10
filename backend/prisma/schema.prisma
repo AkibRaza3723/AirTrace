@@ -16,15 +16,41 @@ model User {
   email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  profession          Profession  @default(STUDENT)
+  onboardingCompleted Boolean     @default(false)
+  preferredAddress    String?
+  preferredLat        Float?
+  preferredLng        Float?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
-  sessions      Session[]
-  accounts      Account[]
-  savedRoutes   SavedRoute[]
+  sessions       Session[]
+  accounts       Account[]
+  campusProfile  CampusProfile?
+  savedRoutes    SavedRoute[]
   hotspotReports HotspotReport[]
 
   @@map("user")
+}
+
+enum Profession {
+  STUDENT
+  PROFESSIONAL
+}
+
+model CampusProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  campusName      String
+  campusLatitude  Float
+  campusLongitude Float
+  campusAddress   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("campus_profiles")
 }
 
 model Session {

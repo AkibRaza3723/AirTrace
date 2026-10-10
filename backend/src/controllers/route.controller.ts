@@ -83,7 +83,6 @@ async function fetchAirQualityBatch(
     const res = await fetch(url);
 
     if (!res.ok) {
-      console.warn(`Open-Meteo AQ batch failed: HTTP ${res.status}`);
       // Fill with nulls
       for (const idx of uncachedIndices) {
         results[idx] = {
@@ -128,8 +127,7 @@ async function fetchAirQualityBatch(
 
       results[idx] = pointData;
     }
-  } catch (err) {
-    console.warn("Open-Meteo batch AQ fetch error:", err);
+  } catch {
     for (const idx of uncachedIndices) {
       results[idx] = {
         lat: points[idx][0],

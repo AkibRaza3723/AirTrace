@@ -163,11 +163,9 @@ ${routes
             isMockFallback: false,
           };
         }
-      } else {
-        console.warn(`OpenAI API returned status ${res.status}. Falling back to algorithmic heuristics.`);
       }
-    } catch (err: any) {
-      console.warn("OpenAI API call failed, falling back to algorithmic report:", err?.message || err);
+    } catch {
+      // Fallback silently to algorithmic heuristics
     }
   }
 

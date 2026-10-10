@@ -32,6 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/lib/auth-context";
 
 // Preset Indian Collegiate Campuses
 interface CampusPreset {
@@ -43,15 +44,18 @@ interface CampusPreset {
   defaultStation: string;
 }
 
+// Default Delhi Campus used whenever no user campus is given
+const DELHI_CAMPUS: CampusPreset = {
+  id: "delhi-campus",
+  name: "IIT Delhi (Hauz Khas) — Delhi Campus",
+  city: "New Delhi, Delhi",
+  lat: 28.545,
+  lng: 77.1926,
+  defaultStation: "IIT Delhi CAAQMS Monitoring Station",
+};
+
 const PRESET_CAMPUSES: CampusPreset[] = [
-  {
-    id: "iit-delhi",
-    name: "IIT Delhi (Hauz Khas)",
-    city: "New Delhi, Delhi",
-    lat: 28.545,
-    lng: 77.1926,
-    defaultStation: "IIT Delhi CAAQMS Monitoring Station",
-  },
+  DELHI_CAMPUS,
   {
     id: "du-north",
     name: "Delhi University (North Campus)",
@@ -120,16 +124,97 @@ const ACTIVITY_OPTIONS: { id: ActivityType; name: string; exertion: string; desc
   },
 ];
 
+function getDateOffset(baseDateStr: string, offsetDays: number): string {
+  try {
+    const [y, m, d] = baseDateStr.split("-").map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d));
+    date.setUTCDate(date.getUTCDate() + offsetDays);
+    return date.toISOString().split("T")[0];
+  } catch {
+    return baseDateStr;
+  }
+}
+
 export default function CampusDecisionPage() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+  const { user } = useAuth();
 
-  // Selected campus & Custom coordinates state
-  const [selectedCampus, setSelectedCampus] = useState<CampusPreset>(PRESET_CAMPUSES[0]);
+  // Selected campus & Custom coordinates state — Defaults to Delhi Campus if not given
+  const [selectedCampus, setSelectedCampus] = useState<CampusPreset>(DELHI_CAMPUS);
+  const [userSavedCampus, setUserSavedCampus] = useState<CampusPreset | null>(null);
   const [isCustomCampus, setIsCustomCampus] = useState(false);
   const [customName, setCustomName] = useState("");
   const [customLat, setCustomLat] = useState("");
   const [customLng, setCustomLng] = useState("");
   const [campusDropdownOpen, setCampusDropdownOpen] = useState(false);
+
+  // Fetch campus profile or sync with user session; if campus not given, show Delhi campus
+  useEffect(() => {
+    let isMounted = true;
+
+    async function resolveCampus() {
+      // 1. If user has campusProfile in auth-context
+      if (user?.campusProfile?.campusLatitude && user?.campusProfile?.campusLongitude) {
+        const uCampus: CampusPreset = {
+          id: "my-campus",
+          name: user.campusProfile.campusName,
+          city: user.campusProfile.campusAddress || "My Registered Campus",
+          lat: Number(user.campusProfile.campusLatitude),
+          lng: Number(user.campusProfile.campusLongitude),
+          defaultStation: `${user.campusProfile.campusName} Monitoring Zone`,
+        };
+        if (isMounted) {
+          setUserSavedCampus(uCampus);
+          setSelectedCampus(uCampus);
+          setIsCustomCampus(false);
+        }
+        return;
+      }
+
+      // 2. If logged in, fetch GET /api/profile/campus to verify
+      if (user?.isLoggedIn) {
+        try {
+          const res = await fetch(`${apiUrl}/api/profile/campus`, {
+            credentials: "include",
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.campusProfile?.campusLatitude && data.campusProfile?.campusLongitude) {
+              const uCampus: CampusPreset = {
+                id: "my-campus",
+                name: data.campusProfile.campusName,
+                city: data.campusProfile.campusAddress || "My Registered Campus",
+                lat: Number(data.campusProfile.campusLatitude),
+                lng: Number(data.campusProfile.campusLongitude),
+                defaultStation: `${data.campusProfile.campusName} Monitoring Zone`,
+              };
+              if (isMounted) {
+                setUserSavedCampus(uCampus);
+                setSelectedCampus(uCampus);
+                setIsCustomCampus(false);
+              }
+              return;
+            }
+          }
+        } catch {
+          // Fallback silently if campus profile is not found
+        }
+      }
+
+      // 3. Fallback: If campus not given, show Delhi campus!
+      if (isMounted) {
+        setUserSavedCampus(null);
+        setSelectedCampus(DELHI_CAMPUS);
+        setIsCustomCampus(false);
+      }
+    }
+
+    resolveCampus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, apiUrl]);
 
   // Activity & Schedule state (SAFE PRERENDER INITIALIZATION)
   const [activityType, setActivityType] = useState<ActivityType>("sports");
@@ -138,6 +223,7 @@ export default function CampusDecisionPage() {
   const [plannedDuration, setPlannedDuration] = useState(60);
   const [compareAlternative, setCompareAlternative] = useState(true);
   const [altStartTime, setAltStartTime] = useState("16:00");
+  const [altDate, setAltDate] = useState("2026-10-10");
 
   // Tab navigation state
   const [activeTab, setActiveTab] = useState<ActiveTabType>("telemetry");
@@ -158,16 +244,22 @@ export default function CampusDecisionPage() {
   // Sync date on client-side mount safely without triggering prerender bailout
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setPlannedDate(new Date().toISOString().split("T")[0]);
+      const today = new Date().toISOString().split("T")[0];
+      setPlannedDate(today);
+      setAltDate(today);
     }
   }, []);
 
   // Active coordinates
   const currentCoords = isCustomCampus
-    ? { lat: parseFloat(customLat) || 28.545, lng: parseFloat(customLng) || 77.1926 }
+    ? { lat: parseFloat(customLat) || DELHI_CAMPUS.lat, lng: parseFloat(customLng) || DELHI_CAMPUS.lng }
     : { lat: selectedCampus.lat, lng: selectedCampus.lng };
 
   const currentCampusName = isCustomCampus ? customName || "Custom Campus" : selectedCampus.name;
+  const isUserCampus = selectedCampus.id === "my-campus";
+  const isDelhiCampus =
+    selectedCampus.id === "delhi-campus" ||
+    (!isCustomCampus && selectedCampus.lat === DELHI_CAMPUS.lat && selectedCampus.lng === DELHI_CAMPUS.lng);
 
   // AI Explanation call
   const triggerAiExplanation = useCallback(async (decision: any, question?: string) => {
@@ -186,8 +278,8 @@ export default function CampusDecisionPage() {
         const json = await res.json();
         setAiExplanation(json.data);
       }
-    } catch (e) {
-      console.warn("AI explanation fetch issue:", e);
+    } catch {
+      // Fallback silently for AI explanation
     } finally {
       setExplaining(false);
       setQnaLoading(false);
@@ -222,6 +314,7 @@ export default function CampusDecisionPage() {
           plannedStartTime,
           plannedDurationMinutes: plannedDuration,
           alternativeStartTime: compareAlternative ? altStartTime : undefined,
+          alternativeDate: compareAlternative ? altDate : undefined,
         }),
       });
       if (!decisionRes.ok) throw new Error("Decision engine evaluation failed.");
@@ -238,7 +331,6 @@ export default function CampusDecisionPage() {
       // Auto trigger AI explanation
       triggerAiExplanation(decisionJson.data);
     } catch (err: any) {
-      console.error(err);
       setError(err.message || "Failed to communicate with BreatheWise decision engine.");
     } finally {
       setLoading(false);
@@ -254,6 +346,7 @@ export default function CampusDecisionPage() {
     plannedDuration,
     compareAlternative,
     altStartTime,
+    altDate,
     triggerAiExplanation,
   ]);
 
@@ -353,9 +446,33 @@ export default function CampusDecisionPage() {
                 CPCB NAQI / GRAP Protocol
               </Badge>
             </div>
-            <p className="text-xs text-gray-500 hidden sm:block">
-              Deterministic outdoor activity safety evaluation for universities and schools.
-            </p>
+            
+            {/* Active Campus & Coordinates Badge */}
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <span className="flex items-center gap-1 text-xs font-bold text-gray-800 bg-gray-100/90 px-2 py-0.5 rounded-lg">
+                <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span className="truncate max-w-[220px] sm:max-w-xs">{currentCampusName}</span>
+              </span>
+              <span className="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200/60">
+                {currentCoords.lat.toFixed(4)}°N, {currentCoords.lng.toFixed(4)}°E
+              </span>
+              <Badge
+                className={cn(
+                  "text-[10px] font-bold",
+                  isUserCampus
+                    ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                    : isDelhiCampus
+                    ? "bg-blue-100 text-blue-800 border-blue-200"
+                    : "bg-purple-100 text-purple-800 border-purple-200"
+                )}
+              >
+                {isUserCampus
+                  ? "🎓 My Registered Campus"
+                  : isDelhiCampus
+                  ? "🏛️ Delhi Campus (Default)"
+                  : "📍 Custom Location"}
+              </Badge>
+            </div>
           </div>
         </div>
 
@@ -363,7 +480,44 @@ export default function CampusDecisionPage() {
         <div className="flex items-center gap-2">
           {/* Quick Preset Pills for Top Universities */}
           <div className="hidden xl:flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl border border-gray-200 text-xs">
-            {PRESET_CAMPUSES.slice(0, 3).map((c) => (
+            {/* User Campus Pill if available */}
+            {userSavedCampus && (
+              <button
+                key="user-campus"
+                onClick={() => {
+                  setSelectedCampus(userSavedCampus);
+                  setIsCustomCampus(false);
+                }}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1",
+                  !isCustomCampus && selectedCampus.id === "my-campus"
+                    ? "bg-emerald-600 text-white shadow-xs font-semibold"
+                    : "text-emerald-800 bg-emerald-50 hover:bg-emerald-100"
+                )}
+              >
+                🎓 My Campus
+              </button>
+            )}
+
+            {/* Delhi Campus Pill */}
+            <button
+              key="delhi-campus"
+              onClick={() => {
+                setSelectedCampus(DELHI_CAMPUS);
+                setIsCustomCampus(false);
+              }}
+              className={cn(
+                "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1",
+                !isCustomCampus && (selectedCampus.id === "delhi-campus" || (selectedCampus.lat === DELHI_CAMPUS.lat && selectedCampus.lng === DELHI_CAMPUS.lng))
+                  ? "bg-blue-600 text-white shadow-xs font-semibold"
+                  : "text-gray-700 hover:text-gray-900"
+              )}
+            >
+              🏛️ Delhi Campus
+            </button>
+
+            {/* Other Presets */}
+            {PRESET_CAMPUSES.filter((c) => c.id !== "delhi-campus").slice(0, 2).map((c) => (
               <button
                 key={c.id}
                 onClick={() => {
@@ -398,8 +552,71 @@ export default function CampusDecisionPage() {
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 py-1">
                   Select Collegiate Institution
                 </p>
-                <div className="flex flex-col gap-1 mt-1 max-h-56 overflow-y-auto">
-                  {PRESET_CAMPUSES.map((c) => (
+                <div className="flex flex-col gap-1 mt-1 max-h-60 overflow-y-auto">
+                  {/* User's registered campus if found */}
+                  {userSavedCampus && (
+                    <button
+                      onClick={() => {
+                        setSelectedCampus(userSavedCampus);
+                        setIsCustomCampus(false);
+                        setCampusDropdownOpen(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between cursor-pointer border mb-1",
+                        !isCustomCampus && selectedCampus.id === "my-campus"
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold"
+                          : "bg-emerald-50/50 hover:bg-emerald-100 text-emerald-900 border-emerald-200/60"
+                      )}
+                    >
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold">{userSavedCampus.name}</span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-200 text-emerald-800 font-bold">
+                            My Campus
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-emerald-700/80 font-mono mt-0.5">
+                          {userSavedCampus.lat.toFixed(4)}°N, {userSavedCampus.lng.toFixed(4)}°E
+                        </p>
+                      </div>
+                      {!isCustomCampus && selectedCampus.id === "my-campus" && (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      )}
+                    </button>
+                  )}
+
+                  {/* Delhi Campus */}
+                  <button
+                    onClick={() => {
+                      setSelectedCampus(DELHI_CAMPUS);
+                      setIsCustomCampus(false);
+                      setCampusDropdownOpen(false);
+                    }}
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between cursor-pointer border",
+                      !isCustomCampus && (selectedCampus.id === "delhi-campus" || (selectedCampus.lat === DELHI_CAMPUS.lat && selectedCampus.lng === DELHI_CAMPUS.lng))
+                        ? "bg-blue-50 text-blue-800 border-blue-300 font-semibold"
+                        : "hover:bg-gray-100 text-gray-700 border-gray-100"
+                    )}
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold">{DELHI_CAMPUS.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-100 text-blue-700 font-bold">
+                          Default
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-gray-400 font-mono mt-0.5">
+                        {DELHI_CAMPUS.lat.toFixed(4)}°N, {DELHI_CAMPUS.lng.toFixed(4)}°E · New Delhi
+                      </p>
+                    </div>
+                    {!isCustomCampus && (selectedCampus.id === "delhi-campus" || (selectedCampus.lat === DELHI_CAMPUS.lat && selectedCampus.lng === DELHI_CAMPUS.lng)) && (
+                      <Check className="w-3.5 h-3.5 text-blue-600" />
+                    )}
+                  </button>
+
+                  {/* Other Presets */}
+                  {PRESET_CAMPUSES.filter((c) => c.id !== "delhi-campus").map((c) => (
                     <button
                       key={c.id}
                       onClick={() => {
@@ -416,7 +633,9 @@ export default function CampusDecisionPage() {
                     >
                       <div>
                         <p className="font-bold text-gray-900">{c.name}</p>
-                        <p className="text-[10px] text-gray-400">{c.city}</p>
+                        <p className="text-[10px] text-gray-400 font-mono">
+                          {c.lat.toFixed(4)}°N, {c.lng.toFixed(4)}°E · {c.city}
+                        </p>
                       </div>
                       {!isCustomCampus && selectedCampus.id === c.id && <Check className="w-3.5 h-3.5 text-blue-600" />}
                     </button>
@@ -561,38 +780,65 @@ export default function CampusDecisionPage() {
                 </div>
               </div>
 
-              {/* Duration Pills */}
+              {/* Duration Pills & Manual Custom Input */}
               <div>
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Duration</span>
-                  <span className="font-mono font-bold text-blue-700 text-xs">{plannedDuration} Minutes</span>
+                  <span className="font-mono font-bold text-blue-700 text-xs">
+                    {plannedDuration} Min {plannedDuration >= 60 && `(${Math.floor(plannedDuration / 60)}h ${plannedDuration % 60 > 0 ? `${plannedDuration % 60}m` : ""})`}
+                  </span>
                 </div>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {[30, 60, 90, 120].map((dur) => (
+                {/* Predefined Quick Duration Pills (including 3h, 4h, 6h) */}
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-1 mb-2">
+                  {[30, 45, 60, 90, 120, 180, 240, 360].map((dur) => (
                     <button
                       key={dur}
+                      type="button"
                       onClick={() => setPlannedDuration(dur)}
                       className={cn(
-                        "py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer",
+                        "py-1 text-[11px] font-semibold rounded-lg border transition-all cursor-pointer text-center",
                         plannedDuration === dur
                           ? "bg-blue-600 text-white border-blue-600 shadow-xs"
                           : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
                       )}
                     >
-                      {dur}m
+                      {dur >= 60 ? `${dur / 60}h` : `${dur}m`}
                     </button>
                   ))}
                 </div>
+                {/* Manual Custom Duration Input */}
+                <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-gray-50/80 border border-gray-200/80">
+                  <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider shrink-0">
+                    Custom Duration:
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      type="number"
+                      min={15}
+                      max={480}
+                      step={15}
+                      value={plannedDuration}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) setPlannedDuration(Math.max(15, Math.min(480, val)));
+                      }}
+                      className="text-xs h-7 w-20 bg-white rounded-lg font-mono font-bold text-center border-gray-200"
+                    />
+                    <span className="text-[10px] text-gray-400 font-mono">
+                      min (max 8h)
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Alternative Time Window Box */}
-              <div className="p-3 bg-gray-50/80 rounded-xl border border-gray-200/90 space-y-2">
+              {/* Alternative Time & Date Window Box */}
+              <div className="p-3 bg-gray-50/80 rounded-xl border border-gray-200/90 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Compass className="w-3.5 h-3.5 text-blue-600" />
                     <div>
                       <p className="text-xs font-bold text-gray-900">Compare Alternative Window</p>
-                      <p className="text-[10px] text-gray-500">Hourly forecast optimization</p>
+                      <p className="text-[10px] text-gray-500">Compare across hours or reschedule to another day</p>
                     </div>
                   </div>
                   <input
@@ -604,14 +850,67 @@ export default function CampusDecisionPage() {
                 </div>
 
                 {compareAlternative && (
-                  <div className="pt-2 border-t border-gray-200 flex items-center justify-between gap-2">
-                    <span className="text-xs text-gray-600">Alternative Time:</span>
-                    <Input
-                      type="time"
-                      value={altStartTime}
-                      onChange={(e) => setAltStartTime(e.target.value)}
-                      className="text-xs h-8 w-28 bg-white rounded-lg"
-                    />
+                  <div className="pt-2 border-t border-gray-200 space-y-2">
+                    {/* Quick Date Reschedule Chips */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mr-1">
+                        Reschedule:
+                      </span>
+                      {[
+                        { label: "Same Day", offset: 0 },
+                        { label: "Tomorrow (+1d)", offset: 1 },
+                        { label: "+2 Days", offset: 2 },
+                      ].map(({ label, offset }) => {
+                        const targetDate = getDateOffset(plannedDate, offset);
+                        const isSelected = altDate === targetDate;
+                        return (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => setAltDate(targetDate)}
+                            className={cn(
+                              "px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all cursor-pointer",
+                              isSelected
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-100"
+                            )}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-semibold text-gray-500 block mb-1">
+                          Alternative Date
+                        </label>
+                        <Input
+                          type="date"
+                          value={altDate}
+                          min={plannedDate}
+                          onChange={(e) => setAltDate(e.target.value)}
+                          className="text-xs h-8 bg-white rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-gray-500 block mb-1">
+                          Alternative Time
+                        </label>
+                        <Input
+                          type="time"
+                          value={altStartTime}
+                          onChange={(e) => setAltStartTime(e.target.value)}
+                          className="text-xs h-8 bg-white rounded-lg"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-gray-500 bg-white/80 p-1.5 rounded-lg border border-gray-200/60 font-mono flex items-center justify-between">
+                      <span>Window: {altDate} · {altStartTime}</span>
+                      <span className="text-blue-600 font-bold">{plannedDuration} min</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -871,9 +1170,16 @@ export default function CampusDecisionPage() {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                              Scheduled Window
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                Scheduled Window
+                              </span>
+                              {decisionResult.slotComparison.plannedSlot.date && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-gray-100 text-gray-600 font-semibold">
+                                  {decisionResult.slotComparison.plannedSlot.date}
+                                </span>
+                              )}
+                            </div>
                             <h3 className="text-base font-extrabold text-gray-900">
                               {decisionResult.slotComparison.plannedSlot.startTime} – {decisionResult.slotComparison.plannedSlot.endTime}
                             </h3>
@@ -922,9 +1228,16 @@ export default function CampusDecisionPage() {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                              Alternative Window
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                Alternative Window
+                              </span>
+                              {decisionResult.slotComparison.alternativeSlot.date && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-100 text-blue-700 font-semibold">
+                                  {decisionResult.slotComparison.alternativeSlot.date}
+                                </span>
+                              )}
+                            </div>
                             <h3 className="text-base font-extrabold text-gray-900">
                               {decisionResult.slotComparison.alternativeSlot.startTime} – {decisionResult.slotComparison.alternativeSlot.endTime}
                             </h3>
@@ -997,12 +1310,18 @@ export default function CampusDecisionPage() {
                       variant="outline"
                       className={cn(
                         "text-xs font-semibold",
-                        aiExplanation?.isAiGenerated
+                        aiExplanation?.provider === "OpenAI"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : aiExplanation?.isAiGenerated
                           ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                           : "bg-amber-50 text-amber-700 border-amber-200"
                       )}
                     >
-                      {aiExplanation?.isAiGenerated ? "AWS Bedrock Claude (Active)" : "Deterministic Rule Engine Fallback"}
+                      {aiExplanation?.provider === "OpenAI"
+                        ? `OpenAI (${aiExplanation.modelId})`
+                        : aiExplanation?.isAiGenerated
+                        ? `AWS Bedrock (${aiExplanation.modelId})`
+                        : "Deterministic Rule Engine Fallback"}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -1029,12 +1348,15 @@ export default function CampusDecisionPage() {
                   {/* Quick question prompt chips */}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {[
-                      "Should asthmatic students wear N95?",
-                      "Can sports be moved to an indoor gymnasium?",
-                      "What are the GRAP Stage IV restrictions?",
+                      "Can outdoor sports & football practice continue today?",
+                      "Should asthmatic students be exempted from outdoor PE?",
+                      "Are outdoor assemblies allowed under current AQI?",
+                      "What indoor air filtration measures are recommended?",
+                      "What are the GRAP Stage restrictions for our campus?",
                     ].map((chip) => (
                       <button
                         key={chip}
+                        type="button"
                         onClick={() => {
                           setUserQuestion(chip);
                           triggerAiExplanation(decisionResult, chip);
