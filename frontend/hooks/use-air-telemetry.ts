@@ -9,6 +9,9 @@ export interface AirTelemetryData {
   statusColor: string;
   headline: string;
   subtext: string;
+  prominentPollutant?: string;
+  standard?: string;
+  subIndices?: Record<string, any>;
   pm25: number;
   pm10: number;
   o3: number;

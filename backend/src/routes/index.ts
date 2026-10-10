@@ -3,6 +3,7 @@ import authRoutes from "./auth.routes.js";
 import exposureRoutes from "./exposure.routes.js";
 import aqiRoutes from "./aqi.routes.js";
 import assistantRoutes from "./assistant.routes.js";
+import campusRoutes from "./campus.routes.js";
 
 const apiRouter = Router();
 
@@ -26,6 +27,9 @@ apiRouter.use("/aqi", aqiRoutes);
 
 // AI Air Advisor routes (/api/assistant/*)
 apiRouter.use("/assistant", assistantRoutes);
+
+// Campus Decision System routes (/api/campus/*)
+apiRouter.use("/campus", campusRoutes);
 
 export default apiRouter;
 

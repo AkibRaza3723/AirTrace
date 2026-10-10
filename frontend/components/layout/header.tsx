@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
+import { useAirTelemetry } from "@/hooks/use-air-telemetry";
 
 const NAV_ITEMS = [
   { label: "Dashboard",     href: "/dashboard" },
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
 export function Header() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { telemetry } = useAirTelemetry();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -75,12 +77,34 @@ export function Header() {
 
         {/* Right side controls */}
         <div className="flex items-center gap-3 shrink-0">
-          {/* Live AQI badge - only visible when logged in */}
+          {/* Live CPCB NAQI badge - only visible when logged in */}
           {user?.isLoggedIn && (
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-semibold text-emerald-700">AQI 42</span>
-              <span className="text-emerald-600 font-medium">Good</span>
+            <div
+              className={cn(
+                "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold",
+                telemetry && telemetry.aqi <= 50
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  : telemetry && telemetry.aqi <= 100
+                  ? "bg-green-50 border-green-200 text-green-800"
+                  : telemetry && telemetry.aqi <= 200
+                  ? "bg-amber-50 border-amber-200 text-amber-800"
+                  : telemetry && telemetry.aqi <= 300
+                  ? "bg-orange-50 border-orange-200 text-orange-800"
+                  : "bg-rose-50 border-rose-200 text-rose-800"
+              )}
+            >
+              <span
+                className={cn(
+                  "w-2 h-2 rounded-full animate-pulse",
+                  telemetry && telemetry.aqi <= 100
+                    ? "bg-emerald-500"
+                    : telemetry && telemetry.aqi <= 200
+                    ? "bg-amber-500"
+                    : "bg-red-500"
+                )}
+              />
+              <span>NAQI {telemetry?.aqi ?? 145}</span>
+              <span className="font-normal opacity-80">{telemetry?.status ?? "Moderate"}</span>
             </div>
           )}
 

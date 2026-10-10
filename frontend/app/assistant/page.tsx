@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useAirTelemetry } from "@/hooks/use-air-telemetry";
 
 interface Message { id: string; sender: "user" | "bot"; text: string; time: string; }
 
@@ -21,14 +22,8 @@ const PRESET_PROMPTS = [
   "Explain today's air quality like I am 15.",
 ];
 
-const CONTEXT_METRICS = [
-  { label: "PM2.5",  value: "8.1 µg/m³", color: "text-emerald-600" },
-  { label: "AQI",    value: "34",         color: "text-emerald-600" },
-  { label: "O₃",     value: "22 ppb",     color: "text-emerald-600" },
-  { label: "Wind",   value: "9 mph WSW",  color: "text-gray-700"    },
-];
-
 export default function AssistantPage() {
+  const { telemetry, isUsingLiveLocation } = useAirTelemetry();
   const [inputQuery, setInputQuery] = useState("");
   const [messages, setMessages]     = useState<Message[]>([{
     id: "1", sender: "user",
@@ -41,20 +36,76 @@ export default function AssistantPage() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isTyping]);
 
-  function handleSend(text?: string) {
+  async function handleSend(text?: string) {
     const q = text || inputQuery;
     if (!q.trim()) return;
-    setMessages(prev => [...prev, { id: Date.now().toString(), sender: "user", text: q, time: "Just now" }]);
+
+    const userMsg: Message = { id: Date.now().toString(), sender: "user", text: q, time: "Just now" };
+    setMessages(prev => [...prev, userMsg]);
     setInputQuery("");
     setIsTyping(true);
-    setTimeout(() => {
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+      const res = await fetch(`${apiUrl}/api/assistant/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: q,
+          history: messages,
+          telemetry: telemetry || {
+            location: isUsingLiveLocation ? "Live Device GPS" : "Brooklyn, NY",
+            aqi: 34,
+            status: "Good",
+            pm25: 8.1,
+            pm10: 14.2,
+            o3: 22,
+            temp: "20°C",
+            humidity: "45%",
+            wind: "9 mph WSW",
+            uv: "UV 3",
+          },
+        }),
+      });
+
+      const json = await res.json();
+      const replyText =
+        json.data?.reply ||
+        json.error ||
+        "Could not generate AI air advisory at this moment.";
+
+      setMessages(prev => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          sender: "bot",
+          time: "Just now",
+          text: replyText,
+        },
+      ]);
+    } catch (err: any) {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          sender: "bot",
+          time: "Just now",
+          text: `⚠️ Network error: Could not reach AirTrace assistant API (${err.message}). Make sure the backend server is running on port 5001.`,
+        },
+      ]);
+    } finally {
       setIsTyping(false);
-      setMessages(prev => [...prev, {
-        id: (Date.now()+1).toString(), sender: "bot", time: "Just now",
-        text: `Based on Station EPA-402 telemetry (PM2.5: 8.1 µg/m³, AQI 34, updated 2 minutes ago), air currents from the southwest are maintaining pristine conditions through 5:30 PM. Your estimated alveolar dose for a 10-mile run remains well within the safe quartile. ✅ Go ahead — the conditions are excellent for high-intensity outdoor exercise right now.`,
-      }]);
-    }, 1400);
+    }
   }
+
+
+  const liveMetrics = [
+    { label: "AQI", value: telemetry ? `${telemetry.aqi}` : "34", color: "text-emerald-600" },
+    { label: "PM2.5", value: telemetry ? `${telemetry.pm25} µg/m³` : "8.1 µg/m³", color: "text-emerald-600" },
+    { label: "O₃", value: telemetry ? `${telemetry.o3} µg/m³` : "22 ppb", color: "text-emerald-600" },
+    { label: "Temp", value: telemetry ? telemetry.temp : "20°C", color: "text-blue-600" },
+    { label: "Wind", value: telemetry ? telemetry.wind : "9 mph WSW", color: "text-gray-700" },
+  ];
 
   return (
     <div className="w-full px-4 md:px-8 py-6 flex flex-col gap-6 max-w-screen-2xl mx-auto">
@@ -79,16 +130,20 @@ export default function AssistantPage() {
           <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-1.5 text-xs text-blue-700">
               <MapPin className="w-3.5 h-3.5" />
-              <span className="font-semibold">Brooklyn, NY · Station EPA-402</span>
+              <span className="font-semibold">
+                {isUsingLiveLocation ? "📍 Live GPS Location" : "Station EPA-402 (Default)"}
+              </span>
             </div>
             <Separator orientation="vertical" className="h-4 hidden sm:block" />
-            {CONTEXT_METRICS.map((m) => (
+            {liveMetrics.map((m) => (
               <span key={m.label} className="text-xs font-mono">
                 <span className="text-gray-400">{m.label}: </span>
                 <span className={cn("font-semibold", m.color)}>{m.value}</span>
               </span>
             ))}
-            <span className="ml-auto text-[10px] text-blue-500 font-mono">Updated 2m ago</span>
+            <span className="ml-auto text-[10px] text-blue-500 font-mono">
+              {telemetry ? "Live Stream" : "Default"}
+            </span>
           </div>
 
           {/* Messages */}
@@ -210,16 +265,33 @@ export default function AssistantPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="text-[10px] font-mono bg-gray-50 border border-gray-100 rounded-lg p-3 text-gray-600 overflow-auto leading-relaxed">
-{`{
-  "location": "Brooklyn, NY",
-  "pm25": 8.1,
-  "aqi": 34,
-  "o3_ppb": 22,
-  "wind": "9 mph WSW",
-  "updated": "2m ago",
-  "source": "EPA-402"
-}`}
+              <pre className="text-[10px] font-mono bg-gray-50 border border-gray-100 rounded-lg p-3 text-gray-600 overflow-auto leading-relaxed max-h-48">
+{JSON.stringify(
+  telemetry ? {
+    location: isUsingLiveLocation ? "Live Device GPS" : "Brooklyn, NY",
+    aqi: telemetry.aqi,
+    status: telemetry.status,
+    pm25: telemetry.pm25,
+    pm10: telemetry.pm10,
+    o3: telemetry.o3,
+    temp: telemetry.temp,
+    humidity: telemetry.humidity,
+    wind: telemetry.wind,
+    uv: telemetry.uv,
+    source: telemetry.source,
+  } : {
+    location: "Brooklyn, NY",
+    aqi: 34,
+    status: "Good",
+    pm25: 8.1,
+    pm10: 14.2,
+    o3: 22,
+    temp: "20°C",
+    source: "EPA-402 (Default)",
+  },
+  null,
+  2
+)}
               </pre>
             </CardContent>
           </Card>

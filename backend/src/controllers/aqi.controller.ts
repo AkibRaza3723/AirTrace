@@ -1,27 +1,77 @@
 import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
+import {
+  calculateCpcbAqi,
+  getCpcbCategory,
+  CpcbAqiResult,
+} from "../services/cpcb-aqi.service.js";
 
 /**
- * Helper to determine AQI status category and theme
+ * Maps CPCB Category to UI theme status and color tokens
  */
-function getAqiCategory(aqi: number) {
-  if (aqi <= 100) return { status: "Good", color: "good", desc: "Air quality is satisfactory and poses little or no risk." };
-  if (aqi <= 150) return { status: "Moderate", color: "moderate", desc: "Air quality is acceptable; some pollutants may affect sensitive people." };
-  if (aqi <= 200) return { status: "Unhealthy for Sensitive Groups", color: "unhealthy-sensitive", desc: "Members of sensitive groups may experience health effects." };
-  if (aqi <= 250) return { status: "Unhealthy", color: "unhealthy", desc: "Everyone may begin to experience health effects." };
-  if (aqi <= 400) return { status: "Very Unhealthy", color: "very-unhealthy", desc: "Health alert: everyone may experience serious effects." };
-  return { status: "Hazardous", color: "hazardous", desc: "Health warning of emergency conditions." };
+function getCpcbUiTheme(category: string, aqi: number) {
+  switch (category) {
+    case "Good":
+      return {
+        status: "Good",
+        color: "good",
+        badgeClass: "bg-emerald-100 text-emerald-800",
+        strokeColor: "#10b981",
+        desc: "Minimal health impact. Clean and favorable for outdoor activities.",
+      };
+    case "Satisfactory":
+      return {
+        status: "Satisfactory",
+        color: "satisfactory",
+        badgeClass: "bg-green-100 text-green-800",
+        strokeColor: "#16a34a",
+        desc: "Minor breathing discomfort to sensitive people. Normal activities approved.",
+      };
+    case "Moderate":
+      return {
+        status: "Moderate",
+        color: "moderate",
+        badgeClass: "bg-amber-100 text-amber-800",
+        strokeColor: "#f59e0b",
+        desc: "Breathing discomfort to people with asthma, lung and heart conditions.",
+      };
+    case "Poor":
+      return {
+        status: "Poor",
+        color: "poor",
+        badgeClass: "bg-orange-100 text-orange-800",
+        strokeColor: "#ea580c",
+        desc: "Breathing discomfort to most people on prolonged outdoor exposure.",
+      };
+    case "Very Poor":
+      return {
+        status: "Very Poor",
+        color: "very-poor",
+        badgeClass: "bg-rose-100 text-rose-800",
+        strokeColor: "#e11d48",
+        desc: "Respiratory illness on prolonged exposure. Significant impact on vulnerable groups.",
+      };
+    case "Severe":
+    default:
+      return {
+        status: "Severe",
+        color: "severe",
+        badgeClass: "bg-red-200 text-red-900",
+        strokeColor: "#991b1b",
+        desc: "Severe health impact on healthy individuals; seriously impacts those with existing ailments.",
+      };
+  }
 }
 
 export async function getLiveAqi(req: Request, res: Response) {
   try {
-    const lat = parseFloat(req.query.lat as string) || 28.6139;
+    const lat = parseFloat(req.query.lat as string) || 28.6139; // Default: Central Delhi
     const lng = parseFloat(req.query.lng as string) || 77.209;
 
-    // 1. Fetch Air Quality from Open-Meteo
-    const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=us_aqi,pm10,pm2_5,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide&hourly=us_aqi,pm2_5&forecast_days=1`;
-    
-    // 2. Fetch Weather Metrics (temperature, humidity, wind, UV) from Open-Meteo Forecast
+    // 1. Fetch Air Quality Telemetry from Open-Meteo
+    const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,us_aqi&hourly=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone&forecast_days=2&timezone=auto`;
+
+    // 2. Fetch Meteorological Metrics from Open-Meteo Forecast
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,uv_index`;
 
     const [aqRes, weatherRes] = await Promise.all([
@@ -33,38 +83,96 @@ export async function getLiveAqi(req: Request, res: Response) {
       return sendError(res, "Failed to retrieve telemetry from Open-Meteo", 502);
     }
 
-    const aqData:any = await aqRes.json();
-    const weatherData:any = await weatherRes.json();
+    const aqData: any = await aqRes.json();
+    const weatherData: any = await weatherRes.json();
 
     const currentAq = aqData.current || {};
     const currentWeather = weatherData.current || {};
     const hourlyAq = aqData.hourly || {};
 
-    const aqi = Math.round(currentAq.us_aqi ?? 0);
-    const categoryInfo = getAqiCategory(aqi);
+    // 3. Compute Official CPCB Indian NAQI
+    const cpcbResult: CpcbAqiResult = calculateCpcbAqi({
+      pm2_5: currentAq.pm2_5,
+      pm10: currentAq.pm10,
+      no2: currentAq.nitrogen_dioxide,
+      so2: currentAq.sulphur_dioxide,
+      co: currentAq.carbon_monoxide,
+      o3: currentAq.ozone,
+    });
 
-    // Format hourly forecast (sample next 8 timestamps)
+    const theme = getCpcbUiTheme(cpcbResult.category, cpcbResult.aqi);
+
+    // 4. Format hourly forecast: find current hour index in the forecast series
     const hourlyTimes = (hourlyAq.time as string[]) || [];
-    const hourlyAqiValues = (hourlyAq.us_aqi as number[]) || [];
-    const forecast = hourlyTimes.slice(0, 8).map((timeStr, idx) => {
+    const hourlyPm25 = (hourlyAq.pm2_5 as number[]) || [];
+    const hourlyPm10 = (hourlyAq.pm10 as number[]) || [];
+    const hourlyNo2 = (hourlyAq.nitrogen_dioxide as number[]) || [];
+    const hourlySo2 = (hourlyAq.sulphur_dioxide as number[]) || [];
+    const hourlyCo = (hourlyAq.carbon_monoxide as number[]) || [];
+    const hourlyO3 = (hourlyAq.ozone as number[]) || [];
+
+    // Find the index matching current time (e.g. "2026-10-10T11")
+    const currentTimeStr = currentAq.time || new Date().toISOString();
+    const currentPrefix = currentTimeStr.slice(0, 13);
+
+    let startIdx = hourlyTimes.findIndex((t) => t.startsWith(currentPrefix));
+    if (startIdx === -1) {
+      const curTimeMs = new Date(currentTimeStr).getTime();
+      startIdx = hourlyTimes.findIndex((t) => new Date(t).getTime() >= curTimeMs);
+      if (startIdx === -1) startIdx = 0;
+    }
+
+    const targetSlice = hourlyTimes.slice(startIdx, startIdx + 8);
+
+    const forecast = targetSlice.map((timeStr, offset) => {
+      const idx = startIdx + offset;
+      const isNow = offset === 0;
+
+      // For "Now", sync directly with the live observed CPCB AQI; for subsequent hours, compute from forecast
+      let hourAqi = cpcbResult.aqi;
+      let hourCategory = cpcbResult.category;
+
+      if (!isNow) {
+        const hourCpcb = calculateCpcbAqi({
+          pm2_5: hourlyPm25[idx],
+          pm10: hourlyPm10[idx],
+          no2: hourlyNo2[idx],
+          so2: hourlySo2[idx],
+          co: hourlyCo[idx],
+          o3: hourlyO3[idx],
+        });
+        hourAqi = hourCpcb.aqi;
+        hourCategory = hourCpcb.category;
+      }
+
       const date = new Date(timeStr);
-      const hourAqi = Math.round(hourlyAqiValues[idx] ?? aqi);
-      const cat = getAqiCategory(hourAqi);
       return {
-        time: idx === 0 ? "Now" : date.toLocaleTimeString([], { hour: "numeric", hour12: true }),
+        time: isNow ? "Now" : date.toLocaleTimeString([], { hour: "numeric", hour12: true }),
         aqi: hourAqi,
-        label: cat.status,
-        color: cat.status === "Good" ? "text-emerald-600" : "text-amber-600",
+        label: hourCategory,
+        color:
+          hourAqi <= 50
+            ? "text-emerald-600"
+            : hourAqi <= 100
+            ? "text-green-600"
+            : hourAqi <= 200
+            ? "text-amber-600"
+            : hourAqi <= 300
+            ? "text-orange-600"
+            : "text-red-700",
       };
     });
 
     const responsePayload = {
       location: { lat, lng },
-      aqi,
-      status: categoryInfo.status,
-      statusColor: categoryInfo.color,
-      headline: `${categoryInfo.status} Air Quality — US AQI ${aqi}`,
-      subtext: categoryInfo.desc,
+      aqi: cpcbResult.aqi,
+      status: cpcbResult.category,
+      statusColor: theme.color,
+      headline: `${cpcbResult.category} Air Quality — CPCB NAQI ${cpcbResult.aqi}`,
+      subtext: cpcbResult.categoryDescription,
+      prominentPollutant: cpcbResult.prominentPollutant,
+      standard: "CPCB National Air Quality Index (India NAQI)",
+      subIndices: cpcbResult.subIndices,
       pm25: currentAq.pm2_5 ?? 0,
       pm10: currentAq.pm10 ?? 0,
       o3: currentAq.ozone ?? 0,
@@ -77,10 +185,10 @@ export async function getLiveAqi(req: Request, res: Response) {
       uv: `UV ${Math.round(currentWeather.uv_index ?? 0)}`,
       forecast,
       updatedAt: new Date().toISOString(),
-      source: "Open-Meteo Air Quality & Weather API",
+      source: "Open-Meteo Air Quality Telemetry (CPCB NAQI Calibrated)",
     };
 
-    return sendSuccess(res, responsePayload, "Air quality and weather telemetry retrieved");
+    return sendSuccess(res, responsePayload, "Indian CPCB NAQI telemetry retrieved");
   } catch (error: any) {
     return sendError(res, error.message || "Internal server error fetching air quality", 500);
   }
@@ -100,8 +208,12 @@ export async function getDelhiStations(_req: Request, res: Response) {
     const lngs = DELHI_STATIONS.map((s) => s.lng).join(",");
 
     const [aqRes, wRes] = await Promise.all([
-      fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lats}&longitude=${lngs}&current=us_aqi,pm10,pm2_5,ozone`),
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,uv_index`),
+      fetch(
+        `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lats}&longitude=${lngs}&current=pm10,pm2_5,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide&hourly=pm10,pm2_5,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide&forecast_days=2&timezone=auto`
+      ),
+      fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,uv_index`
+      ),
     ]);
 
     const aqData: any = await aqRes.json();
@@ -110,32 +222,104 @@ export async function getDelhiStations(_req: Request, res: Response) {
     const stations = DELHI_STATIONS.map((s, idx) => {
       const curAq = (Array.isArray(aqData) ? aqData[idx]?.current : aqData?.current) || {};
       const curW = (Array.isArray(wData) ? wData[idx]?.current : wData?.current) || {};
-      const aqi = Math.round(curAq.us_aqi ?? 150);
-      const cat = getAqiCategory(aqi);
+      const curHourly = (Array.isArray(aqData) ? aqData[idx]?.hourly : aqData?.hourly) || {};
+
+      const cpcbResult = calculateCpcbAqi({
+        pm2_5: curAq.pm2_5,
+        pm10: curAq.pm10,
+        no2: curAq.nitrogen_dioxide,
+        so2: curAq.sulphur_dioxide,
+        co: curAq.carbon_monoxide,
+        o3: curAq.ozone,
+      });
+
+      const theme = getCpcbUiTheme(cpcbResult.category, cpcbResult.aqi);
+
+      // Compute station-specific 8-hour progression
+      const hourlyTimes = (curHourly.time as string[]) || [];
+      const hourlyPm25 = (curHourly.pm2_5 as number[]) || [];
+      const hourlyPm10 = (curHourly.pm10 as number[]) || [];
+      const hourlyNo2 = (curHourly.nitrogen_dioxide as number[]) || [];
+      const hourlySo2 = (curHourly.sulphur_dioxide as number[]) || [];
+      const hourlyCo = (curHourly.carbon_monoxide as number[]) || [];
+      const hourlyO3 = (curHourly.ozone as number[]) || [];
+
+      const currentTimeStr = curAq.time || new Date().toISOString();
+      const currentPrefix = currentTimeStr.slice(0, 13);
+      let startIdx = hourlyTimes.findIndex((t) => t.startsWith(currentPrefix));
+      if (startIdx === -1) {
+        const curTimeMs = new Date(currentTimeStr).getTime();
+        startIdx = hourlyTimes.findIndex((t) => new Date(t).getTime() >= curTimeMs);
+        if (startIdx === -1) startIdx = 0;
+      }
+
+      const targetSlice = hourlyTimes.slice(startIdx, startIdx + 8);
+      const stationForecast = targetSlice.map((timeStr, offset) => {
+        const hIdx = startIdx + offset;
+        const isNow = offset === 0;
+
+        let hourAqi = cpcbResult.aqi;
+        let hourCategory = cpcbResult.category;
+
+        if (!isNow) {
+          const hourCpcb = calculateCpcbAqi({
+            pm2_5: hourlyPm25[hIdx],
+            pm10: hourlyPm10[hIdx],
+            no2: hourlyNo2[hIdx],
+            so2: hourlySo2[hIdx],
+            co: hourlyCo[hIdx],
+            o3: hourlyO3[hIdx],
+          });
+          hourAqi = hourCpcb.aqi;
+          hourCategory = hourCpcb.category;
+        }
+
+        const date = new Date(timeStr);
+        return {
+          time: isNow ? "Now" : date.toLocaleTimeString([], { hour: "numeric", hour12: true }),
+          aqi: hourAqi,
+          label: hourCategory,
+          color:
+            hourAqi <= 50
+              ? "text-emerald-600"
+              : hourAqi <= 100
+              ? "text-green-600"
+              : hourAqi <= 200
+              ? "text-amber-600"
+              : hourAqi <= 300
+              ? "text-orange-600"
+              : "text-red-700",
+        };
+      });
 
       return {
         name: s.name,
         city: s.city,
         lat: s.lat,
         lng: s.lng,
-        aqi,
-        status: cat.status,
-        statusColor: cat.color,
-        headline: `${cat.status} — ${s.headline}`,
-        subtext: cat.desc,
+        aqi: cpcbResult.aqi,
+        status: cpcbResult.category,
+        statusColor: theme.color,
+        prominentPollutant: cpcbResult.prominentPollutant,
+        standard: "CPCB National Air Quality Index (India NAQI)",
+        headline: `${cpcbResult.category} — ${s.headline}`,
+        subtext: cpcbResult.categoryDescription,
         pm25: curAq.pm2_5 ?? 60,
         pm10: curAq.pm10 ?? 120,
         o3: curAq.ozone ?? 40,
+        no2: curAq.nitrogen_dioxide ?? 20,
+        so2: curAq.sulphur_dioxide ?? 15,
+        co: curAq.carbon_monoxide ?? 400,
         temp: `${Math.round(curW.temperature_2m ?? 28)}°C`,
         humidity: `${Math.round(curW.relative_humidity_2m ?? 45)}%`,
         wind: `${Math.round(curW.wind_speed_10m ?? 10)} km/h`,
         uv: `UV ${Math.round(curW.uv_index ?? 3)}`,
+        forecast: stationForecast,
       };
     });
 
-    return sendSuccess(res, stations, "Delhi regional stations fetched");
+    return sendSuccess(res, stations, "Delhi regional stations fetched with CPCB NAQI and forecasts");
   } catch (err: any) {
     return sendError(res, err.message || "Failed to load Delhi stations", 500);
   }
 }
-
