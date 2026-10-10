@@ -637,7 +637,7 @@ export default function CampusDecisionPage() {
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                 Monitored Pollutants (CPCB Sub-Index Breakdown)
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                 {obs?.subIndices ? (
                   Object.entries(obs.subIndices).map(([key, data]: [string, any]) => (
                     <div key={key} className="p-2.5 rounded-xl border border-gray-100 bg-gray-50/70 flex flex-col">

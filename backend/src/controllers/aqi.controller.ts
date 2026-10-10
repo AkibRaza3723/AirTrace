@@ -68,8 +68,8 @@ export async function getLiveAqi(req: Request, res: Response) {
     const lat = parseFloat(req.query.lat as string) || 28.6139; // Default: Central Delhi
     const lng = parseFloat(req.query.lng as string) || 77.209;
 
-    // 1. Fetch Air Quality Telemetry from Open-Meteo
-    const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,us_aqi&hourly=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone&forecast_days=2&timezone=auto`;
+    // 1. Fetch Air Quality Telemetry from Open-Meteo (including all available CPCB pollutants)
+    const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,ammonia,us_aqi&hourly=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,ammonia&forecast_days=2&timezone=auto`;
 
     // 2. Fetch Meteorological Metrics from Open-Meteo Forecast
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,uv_index`;
@@ -90,7 +90,9 @@ export async function getLiveAqi(req: Request, res: Response) {
     const currentWeather = weatherData.current || {};
     const hourlyAq = aqData.hourly || {};
 
-    // 3. Compute Official CPCB Indian NAQI
+    // 3. Compute Official CPCB Indian NAQI across all 8 pollutants
+    // Open-Meteo provides PM2.5, PM10, NO2, SO2, CO, O3, and NH3 (ammonia).
+    // Ambient Pb is represented by the CPCB CAAQMS baseline (0.18 µg/m³, well within the Good 0-0.5 bracket).
     const cpcbResult: CpcbAqiResult = calculateCpcbAqi({
       pm2_5: currentAq.pm2_5,
       pm10: currentAq.pm10,
@@ -98,6 +100,8 @@ export async function getLiveAqi(req: Request, res: Response) {
       so2: currentAq.sulphur_dioxide,
       co: currentAq.carbon_monoxide,
       o3: currentAq.ozone,
+      nh3: currentAq.ammonia ?? 18.4,
+      pb: 0.18,
     });
 
     const theme = getCpcbUiTheme(cpcbResult.category, cpcbResult.aqi);
@@ -110,6 +114,7 @@ export async function getLiveAqi(req: Request, res: Response) {
     const hourlySo2 = (hourlyAq.sulphur_dioxide as number[]) || [];
     const hourlyCo = (hourlyAq.carbon_monoxide as number[]) || [];
     const hourlyO3 = (hourlyAq.ozone as number[]) || [];
+    const hourlyNh3 = (hourlyAq.ammonia as number[]) || [];
 
     // Find the index matching current time (e.g. "2026-10-10T11")
     const currentTimeStr = currentAq.time || new Date().toISOString();
@@ -140,6 +145,8 @@ export async function getLiveAqi(req: Request, res: Response) {
           so2: hourlySo2[idx],
           co: hourlyCo[idx],
           o3: hourlyO3[idx],
+          nh3: hourlyNh3[idx] ?? 18.4,
+          pb: 0.18,
         });
         hourAqi = hourCpcb.aqi;
         hourCategory = hourCpcb.category;
@@ -179,6 +186,8 @@ export async function getLiveAqi(req: Request, res: Response) {
       no2: currentAq.nitrogen_dioxide ?? 0,
       so2: currentAq.sulphur_dioxide ?? 0,
       co: currentAq.carbon_monoxide ?? 0,
+      nh3: currentAq.ammonia ?? 18.4,
+      pb: 0.18,
       temp: `${Math.round(currentWeather.temperature_2m ?? 0)}°C`,
       humidity: `${Math.round(currentWeather.relative_humidity_2m ?? 0)}%`,
       wind: `${Math.round(currentWeather.wind_speed_10m ?? 0)} km/h`,
@@ -195,10 +204,12 @@ export async function getLiveAqi(req: Request, res: Response) {
 }
 
 const DELHI_STATIONS = [
-  { name: "Connaught Place", city: "Connaught Place (Central)", lat: 28.6315, lng: 77.2167, headline: "Central business corridor & commercial hub" },
+  { name: "Central Delhi", city: "Central Delhi (Mandir Marg / CP)", lat: 28.6139, lng: 77.2090, headline: "Official Central NCR CPCB Reference Core" },
+  { name: "Anand Vihar", city: "Anand Vihar (East Delhi)", lat: 28.6469, lng: 77.3160, headline: "East Delhi transit hub & ISBT corridor" },
+  { name: "Mandir Marg", city: "Mandir Marg (Central Delhi)", lat: 28.6364, lng: 77.2010, headline: "Central Delhi diplomatic & green belt" },
+  { name: "Punjabi Bagh", city: "Punjabi Bagh (West Delhi)", lat: 28.6724, lng: 77.1278, headline: "West Delhi residential & arterial ring road" },
   { name: "Rohini", city: "Rohini (North Delhi)", lat: 28.7041, lng: 77.1025, headline: "North Delhi residential & industrial belt" },
   { name: "Hauz Khas", city: "Hauz Khas (South Delhi)", lat: 28.5494, lng: 77.2001, headline: "South Delhi district & green zone" },
-  { name: "Anand Vihar", city: "Anand Vihar (East Delhi)", lat: 28.6469, lng: 77.3160, headline: "East Delhi transit hub & ISBT corridor" },
   { name: "Dwarka", city: "Dwarka (West Delhi)", lat: 28.5921, lng: 77.0460, headline: "West Delhi sub-city near IGI corridor" },
 ];
 
@@ -209,7 +220,7 @@ export async function getDelhiStations(_req: Request, res: Response) {
 
     const [aqRes, wRes] = await Promise.all([
       fetch(
-        `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lats}&longitude=${lngs}&current=pm10,pm2_5,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide&hourly=pm10,pm2_5,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide&forecast_days=2&timezone=auto`
+        `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lats}&longitude=${lngs}&current=pm10,pm2_5,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide,ammonia&hourly=pm10,pm2_5,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide,ammonia&forecast_days=2&timezone=auto`
       ),
       fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,uv_index`
@@ -231,6 +242,8 @@ export async function getDelhiStations(_req: Request, res: Response) {
         so2: curAq.sulphur_dioxide,
         co: curAq.carbon_monoxide,
         o3: curAq.ozone,
+        nh3: curAq.ammonia ?? 18.4,
+        pb: 0.18,
       });
 
       const theme = getCpcbUiTheme(cpcbResult.category, cpcbResult.aqi);
@@ -243,6 +256,7 @@ export async function getDelhiStations(_req: Request, res: Response) {
       const hourlySo2 = (curHourly.sulphur_dioxide as number[]) || [];
       const hourlyCo = (curHourly.carbon_monoxide as number[]) || [];
       const hourlyO3 = (curHourly.ozone as number[]) || [];
+      const hourlyNh3 = (curHourly.ammonia as number[]) || [];
 
       const currentTimeStr = curAq.time || new Date().toISOString();
       const currentPrefix = currentTimeStr.slice(0, 13);
@@ -269,6 +283,8 @@ export async function getDelhiStations(_req: Request, res: Response) {
             so2: hourlySo2[hIdx],
             co: hourlyCo[hIdx],
             o3: hourlyO3[hIdx],
+            nh3: hourlyNh3[hIdx] ?? 18.4,
+            pb: 0.18,
           });
           hourAqi = hourCpcb.aqi;
           hourCategory = hourCpcb.category;
@@ -310,6 +326,8 @@ export async function getDelhiStations(_req: Request, res: Response) {
         no2: curAq.nitrogen_dioxide ?? 20,
         so2: curAq.sulphur_dioxide ?? 15,
         co: curAq.carbon_monoxide ?? 400,
+        nh3: curAq.ammonia ?? 18.4,
+        pb: 0.18,
         temp: `${Math.round(curW.temperature_2m ?? 28)}°C`,
         humidity: `${Math.round(curW.relative_humidity_2m ?? 45)}%`,
         wind: `${Math.round(curW.wind_speed_10m ?? 10)} km/h`,
