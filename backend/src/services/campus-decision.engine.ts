@@ -41,6 +41,7 @@ export interface HourlyForecastPoint {
 
 export interface SlotAnalysis {
   slotLabel: string;
+  date?: string;
   startTime: string;
   endTime: string;
   averageAqi: number;
@@ -61,6 +62,7 @@ export interface CampusDecisionInput {
   plannedStartTime: string; // 'HH:mm'
   plannedDurationMinutes: number; // 15 - 480
   alternativeStartTime?: string; // 'HH:mm'
+  alternativeDate?: string; // 'YYYY-MM-DD'
   currentObservation?: {
     timestamp: string;
     pm2_5?: number | null;
@@ -231,6 +233,14 @@ export function validateCampusDecisionInput(input: CampusDecisionInput): { valid
     return { valid: false, error: "Alternative start time must be in 24-hour format HH:mm (e.g. '16:00')" };
   }
 
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (input.plannedDate && !dateRegex.test(input.plannedDate)) {
+    return { valid: false, error: "Planned date must be in YYYY-MM-DD format" };
+  }
+  if (input.alternativeDate && !dateRegex.test(input.alternativeDate)) {
+    return { valid: false, error: "Alternative date must be in YYYY-MM-DD format" };
+  }
+
   return { valid: true };
 }
 
@@ -274,10 +284,10 @@ function analyzeTimeSlot(
       });
 
       if (fallbackPoints.length === 0) return null;
-      return computeSlotMetrics(fallbackPoints, label, startTimeStr, endTimeStr);
+      return computeSlotMetrics(fallbackPoints, label, startTimeStr, endTimeStr, dateStr);
     }
 
-    return computeSlotMetrics(pointsInWindow, label, startTimeStr, endTimeStr);
+    return computeSlotMetrics(pointsInWindow, label, startTimeStr, endTimeStr, dateStr);
   } catch {
     return null;
   }
@@ -287,7 +297,8 @@ function computeSlotMetrics(
   points: HourlyForecastPoint[],
   label: string,
   startTime: string,
-  endTime: string
+  endTime: string,
+  date?: string
 ): SlotAnalysis {
   const avgAqi = Math.round(points.reduce((acc, p) => acc + p.cpcbAqi, 0) / points.length);
   const peakPm25 = Math.max(...points.map((p) => p.pm2_5));
@@ -302,6 +313,7 @@ function computeSlotMetrics(
 
   return {
     slotLabel: label,
+    date,
     startTime,
     endTime,
     averageAqi: avgAqi,
@@ -396,12 +408,18 @@ export function evaluateCampusDecision(input: CampusDecisionInput): CampusDecisi
     );
 
     if (input.alternativeStartTime) {
+      const altDate = input.alternativeDate || input.plannedDate;
+      const isDifferentDate = input.alternativeDate && input.alternativeDate !== input.plannedDate;
+      const altLabel = isDifferentDate
+        ? `Alternative Slot (${altDate} ${input.alternativeStartTime})`
+        : `Alternative Slot (${input.alternativeStartTime})`;
+
       alternativeSlot = analyzeTimeSlot(
         input.hourlyForecast!,
-        input.plannedDate,
+        altDate,
         input.alternativeStartTime,
         input.plannedDurationMinutes,
-        `Alternative Slot (${input.alternativeStartTime})`
+        altLabel
       );
     }
   } else {
@@ -467,10 +485,11 @@ export function evaluateCampusDecision(input: CampusDecisionInput): CampusDecisi
       preferredSlot = "alternative";
       decisionCategory = "Consider an alternative time or location";
       reasonCodes.push("ALTERNATIVE_SLOT_RELATIVELY_BETTER", "PLANNED_SLOT_LESS_FAVORABLE");
+      const altDateLabel = alternativeSlot.date && alternativeSlot.date !== input.plannedDate ? `${alternativeSlot.date} ` : "";
       reasons.push(
-        `Alternative slot (${alternativeSlot.startTime}–${alternativeSlot.endTime}) forecasts lower pollution (AQI ~${alternativeSlot.averageAqi}) compared to planned slot (AQI ~${plannedSlot.averageAqi}, Δ ${aqiDifference} points lower).`
+        `Alternative slot (${altDateLabel}${alternativeSlot.startTime}–${alternativeSlot.endTime}) forecasts lower pollution (AQI ~${alternativeSlot.averageAqi}) compared to planned slot (AQI ~${plannedSlot.averageAqi}, Δ ${aqiDifference} points lower).`
       );
-      primaryRecommendation = `Reschedule ${policy.displayName.toLowerCase()} to the alternative time window (${alternativeSlot.startTime}) for reduced respiratory exposure.`;
+      primaryRecommendation = `Reschedule ${policy.displayName.toLowerCase()} to the alternative time window (${altDateLabel}${alternativeSlot.startTime}) for reduced respiratory exposure.`;
       comparisonSummary = `Alternative window is ~${Math.round((aqiDifference / plannedSlot.averageAqi) * 100)}% cleaner in particulate levels.`;
     } else if (baselineAqi > restrictionMinAqi && alternativeSlot.averageAqi > restrictionMinAqi) {
       // Both are severely polluted

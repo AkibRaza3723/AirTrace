@@ -83,7 +83,7 @@ async function fetchOpenMeteoAirQuality(lat: number, lng: number): Promise<any> 
     return cached.data;
   }
 
-  const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,ammonia,us_aqi&hourly=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,ammonia,us_aqi&forecast_days=2&timezone=auto`;
+  const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,ammonia,us_aqi&hourly=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,ammonia,us_aqi&forecast_days=5&timezone=auto`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout

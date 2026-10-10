@@ -3,6 +3,7 @@ import authRoutes from "./auth.routes.js";
 import aqiRoutes from "./aqi.routes.js";
 import assistantRoutes from "./assistant.routes.js";
 import campusRoutes from "./campus.routes.js";
+import routeRoutes from "./route.routes.js";
 
 const apiRouter = Router();
 
@@ -26,6 +27,9 @@ apiRouter.use("/assistant", assistantRoutes);
 
 // Campus Decision System routes (/api/campus/*)
 apiRouter.use("/campus", campusRoutes);
+
+// Route Planning routes (/api/routes/*)
+apiRouter.use("/routes", routeRoutes);
 
 export default apiRouter;
 
