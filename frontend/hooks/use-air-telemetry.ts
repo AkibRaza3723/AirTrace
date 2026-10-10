@@ -18,6 +18,8 @@ export interface AirTelemetryData {
   no2?: number;
   so2?: number;
   co?: number;
+  nh3?: number;
+  pb?: number;
   temp: string;
   humidity: string;
   wind: string;

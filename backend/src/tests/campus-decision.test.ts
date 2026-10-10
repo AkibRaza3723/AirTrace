@@ -61,6 +61,87 @@ test("CPCB NAQI Sub-Index Calculations", async (t) => {
     assert.equal(result.category, "Moderate");
   });
 
+  await t.test("NH3 (Ammonia) sub-index conforms to official CPCB breakpoints", () => {
+    // 0-200 -> 0-50 (Good)
+    const idx100 = calculateSubIndex("nh3", 100);
+    assert.equal(idx100, 25);
+
+    // 201-400 -> 51-100 (Satisfactory)
+    const idx300 = calculateSubIndex("nh3", 300);
+    assert.ok(idx300 !== null && idx300 >= 51 && idx300 <= 100);
+
+    // 401-800 -> 101-200 (Moderate)
+    const idx600 = calculateSubIndex("nh3", 600);
+    assert.ok(idx600 !== null && idx600 >= 101 && idx600 <= 200);
+
+    // 801-1200 -> 201-300 (Poor)
+    const idx1000 = calculateSubIndex("nh3", 1000);
+    assert.ok(idx1000 !== null && idx1000 >= 201 && idx1000 <= 300);
+
+    // 1201-1800 -> 301-400 (Very Poor)
+    const idx1500 = calculateSubIndex("nh3", 1500);
+    assert.ok(idx1500 !== null && idx1500 >= 301 && idx1500 <= 400);
+
+    // 1801-2400 -> 401-500 (Severe)
+    const idx2100 = calculateSubIndex("nh3", 2100);
+    assert.ok(idx2100 !== null && idx2100 >= 401 && idx2100 <= 500);
+  });
+
+  await t.test("Pb (Lead) sub-index conforms to official CPCB breakpoints", () => {
+    // 0-0.5 -> 0-50 (Good)
+    assert.equal(calculateSubIndex("pb", 0.25), 25);
+
+    // 0.6-1.0 -> 51-100 (Satisfactory)
+    const idx08 = calculateSubIndex("pb", 0.8);
+    assert.ok(idx08 !== null && idx08 >= 51 && idx08 <= 100);
+
+    // 1.1-2.0 -> 101-200 (Moderate)
+    const idx15 = calculateSubIndex("pb", 1.5);
+    assert.ok(idx15 !== null && idx15 >= 101 && idx15 <= 200);
+
+    // 2.1-3.0 -> 201-300 (Poor)
+    const idx25 = calculateSubIndex("pb", 2.5);
+    assert.ok(idx25 !== null && idx25 >= 201 && idx25 <= 300);
+  });
+
+  await t.test("Calculates exact Delhi CPCB AQI 212 from ground monitoring telemetry", () => {
+    // Ground monitoring values matching Delhi CAAQMS baseline: PM10 = 262 µg/m³, PM2.5 = 71 µg/m³
+    const delhiGround = calculateCpcbAqi({
+      pm2_5: 71,
+      pm10: 262,
+      no2: 18.5,
+      so2: 12.0,
+      co: 420, // µg/m³ -> 0.42 mg/m³
+      o3: 45.0,
+      nh3: 25.0,
+      pb: 0.15,
+    });
+
+    assert.equal(delhiGround.aqi, 212, `Expected Delhi AQI 212, got ${delhiGround.aqi}`);
+    assert.equal(delhiGround.category, "Poor");
+    assert.equal(delhiGround.prominentPollutant, "PM10");
+    assert.equal(delhiGround.pollutantCount, 8);
+    assert.equal(delhiGround.isSufficient, true);
+  });
+
+  await t.test("Calibrates model dust spike to prevent false 500 Severe rating in Delhi", () => {
+    // Model dust anomaly in south NCR: raw PM10 = 812.1 µg/m³, PM2.5 = 128.1 µg/m³
+    const calibratedResult = calculateCpcbAqi({
+      pm2_5: 128.1,
+      pm10: 812.1,
+      no2: 5.7,
+      so2: 17.1,
+      co: 384,
+      o3: 169,
+      nh3: 18.4,
+      pb: 0.18,
+    });
+
+    // Instead of jumping to 500, it calibrates to Delhi urban conditions
+    assert.ok(calibratedResult.aqi <= 300, `Expected calibrated AQI <= 300, got ${calibratedResult.aqi}`);
+    assert.notEqual(calibratedResult.aqi, 500);
+  });
+
   await t.test("Invalid or missing concentrations return null safely", () => {
     assert.equal(calculateSubIndex("pm2_5", -10), null);
     assert.equal(calculateSubIndex("pm2_5", NaN), null);

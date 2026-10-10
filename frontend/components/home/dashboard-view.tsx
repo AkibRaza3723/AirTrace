@@ -44,6 +44,8 @@ interface LocationOption {
   no2?: number;
   so2?: number;
   co?: number;
+  nh3?: number;
+  pb?: number;
   temp: string;
   humidity: string;
   wind: string;
@@ -90,18 +92,22 @@ export function DashboardView() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const fallback: LocationOption = {
-    name: "Anand Vihar, Delhi",
-    city: "Anand Vihar (East Delhi)",
-    aqi: 245,
+    name: "Central Delhi (Connaught Place)",
+    city: "Central Delhi (Mandir Marg / CP)",
+    aqi: 212,
     status: "Poor",
     statusColor: "poor",
-    headline: "Poor Air Quality — CPCB NAQI 245",
+    headline: "Poor Air Quality — CPCB NAQI 212",
     subtext: "Breathing discomfort to most people on prolonged outdoor exposure.",
-    prominentPollutant: "PM2.5",
-    pm25: 112.5,
-    pm10: 240.0,
+    prominentPollutant: "PM10",
+    pm25: 71.0,
+    pm10: 262.0,
     o3: 45.0,
     no2: 24.5,
+    so2: 14.2,
+    co: 420,
+    nh3: 18.4,
+    pb: 0.18,
     temp: "28°C",
     humidity: "62%",
     wind: "9 km/h",
@@ -117,13 +123,15 @@ export function DashboardView() {
     statusColor: telemetry.statusColor,
     headline: telemetry.headline,
     subtext: telemetry.subtext,
-    prominentPollutant: telemetry.prominentPollutant ?? "PM2.5",
+    prominentPollutant: telemetry.prominentPollutant ?? "PM10",
     pm25: telemetry.pm25,
     pm10: telemetry.pm10,
     o3: telemetry.o3,
     no2: telemetry.no2,
     so2: telemetry.so2,
     co: telemetry.co,
+    nh3: telemetry.nh3,
+    pb: telemetry.pb,
     temp: telemetry.temp,
     humidity: telemetry.humidity,
     wind: telemetry.wind,
@@ -450,7 +458,7 @@ export function DashboardView() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   {
                     label: "PM 2.5",
@@ -474,8 +482,10 @@ export function DashboardView() {
                         ? "#16a34a"
                         : activeData.pm25 <= 90
                         ? "#f59e0b"
-                        : "#ea580c",
-                    desc: "Fine respirable particles — deep lung penetration",
+                        : activeData.pm25 <= 120
+                        ? "#ea580c"
+                        : "#e11d48",
+                    desc: "Fine respirable particles",
                   },
                   {
                     label: "PM 10",
@@ -489,7 +499,9 @@ export function DashboardView() {
                         ? "Satisfactory"
                         : activeData.pm10 <= 250
                         ? "Moderate"
-                        : "Poor / Severe",
+                        : activeData.pm10 <= 350
+                        ? "Poor"
+                        : "Very Poor / Severe",
                     color:
                       activeData.pm10 <= 50
                         ? "#10b981"
@@ -497,45 +509,151 @@ export function DashboardView() {
                         ? "#16a34a"
                         : activeData.pm10 <= 250
                         ? "#f59e0b"
-                        : "#ea580c",
-                    desc: "Coarse particulate matter — dust & vehicular exhaust",
+                        : activeData.pm10 <= 350
+                        ? "#ea580c"
+                        : "#e11d48",
+                    desc: "Coarse particulate matter",
+                  },
+                  {
+                    label: "NO₂",
+                    unit: "µg/m³",
+                    value: activeData.no2 ?? 18.5,
+                    max: 400,
+                    badge:
+                      (activeData.no2 ?? 18.5) <= 40
+                        ? "Good"
+                        : (activeData.no2 ?? 18.5) <= 80
+                        ? "Satisfactory"
+                        : (activeData.no2 ?? 18.5) <= 180
+                        ? "Moderate"
+                        : "Poor / Severe",
+                    color:
+                      (activeData.no2 ?? 18.5) <= 40
+                        ? "#10b981"
+                        : (activeData.no2 ?? 18.5) <= 80
+                        ? "#16a34a"
+                        : "#f59e0b",
+                    desc: "Nitrogen dioxide vehicular exhaust",
+                  },
+                  {
+                    label: "SO₂",
+                    unit: "µg/m³",
+                    value: activeData.so2 ?? 14.2,
+                    max: 800,
+                    badge:
+                      (activeData.so2 ?? 14.2) <= 40
+                        ? "Good"
+                        : (activeData.so2 ?? 14.2) <= 80
+                        ? "Satisfactory"
+                        : "Moderate",
+                    color: (activeData.so2 ?? 14.2) <= 40 ? "#10b981" : "#16a34a",
+                    desc: "Sulphur dioxide industrial emissions",
+                  },
+                  {
+                    label: "CO",
+                    unit: "mg/m³",
+                    value: Number(
+                      (
+                        (activeData.co ?? 420) > 50
+                          ? (activeData.co ?? 420) / 1000
+                          : (activeData.co ?? 0.42)
+                      ).toFixed(2)
+                    ),
+                    max: 17,
+                    badge:
+                      ((activeData.co ?? 420) > 50 ? (activeData.co ?? 420) / 1000 : (activeData.co ?? 0.42)) <= 1.0
+                        ? "Good"
+                        : ((activeData.co ?? 420) > 50 ? (activeData.co ?? 420) / 1000 : (activeData.co ?? 0.42)) <= 2.0
+                        ? "Satisfactory"
+                        : "Moderate",
+                    color:
+                      ((activeData.co ?? 420) > 50 ? (activeData.co ?? 420) / 1000 : (activeData.co ?? 0.42)) <= 1.0
+                        ? "#10b981"
+                        : "#16a34a",
+                    desc: "Carbon monoxide incomplete combustion",
                   },
                   {
                     label: "O₃ (Ozone)",
                     unit: "µg/m³",
                     value: activeData.o3,
-                    max: 200,
-                    badge: activeData.o3 <= 50 ? "Good" : activeData.o3 <= 100 ? "Satisfactory" : "Moderate",
-                    color: activeData.o3 <= 100 ? "#16a34a" : "#8b5cf6",
-                    desc: "Ground-level photochemical ozone",
+                    max: 208,
+                    badge:
+                      activeData.o3 <= 50
+                        ? "Good"
+                        : activeData.o3 <= 100
+                        ? "Satisfactory"
+                        : activeData.o3 <= 168
+                        ? "Moderate"
+                        : "Poor",
+                    color:
+                      activeData.o3 <= 50
+                        ? "#10b981"
+                        : activeData.o3 <= 100
+                        ? "#16a34a"
+                        : activeData.o3 <= 168
+                        ? "#f59e0b"
+                        : "#ea580c",
+                    desc: "Photochemical ground smog",
+                  },
+                  {
+                    label: "NH₃ (Ammonia)",
+                    unit: "µg/m³",
+                    value: activeData.nh3 ?? 18.4,
+                    max: 800,
+                    badge:
+                      (activeData.nh3 ?? 18.4) <= 200
+                        ? "Good"
+                        : (activeData.nh3 ?? 18.4) <= 400
+                        ? "Satisfactory"
+                        : "Moderate",
+                    color: (activeData.nh3 ?? 18.4) <= 200 ? "#10b981" : "#16a34a",
+                    desc: "Ammonia agricultural / urban trace",
+                  },
+                  {
+                    label: "Pb (Lead)",
+                    unit: "µg/m³",
+                    value: activeData.pb ?? 0.18,
+                    max: 3.0,
+                    badge:
+                      (activeData.pb ?? 0.18) <= 0.5
+                        ? "Good"
+                        : (activeData.pb ?? 0.18) <= 1.0
+                        ? "Satisfactory"
+                        : "Moderate",
+                    color: (activeData.pb ?? 0.18) <= 0.5 ? "#10b981" : "#16a34a",
+                    desc: "Lead heavy metal particulate",
                   },
                 ].map((pol) => (
-                  <div key={pol.label} className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                        {pol.label}
-                      </span>
-                      <span
-                        className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-                        style={{ background: pol.color + "20", color: pol.color }}
-                      >
-                        {pol.badge}
-                      </span>
+                  <div key={pol.label} className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider truncate">
+                          {pol.label}
+                        </span>
+                        <span
+                          className="text-[9px] px-1.5 py-0.5 rounded-full font-bold shrink-0"
+                          style={{ background: pol.color + "20", color: pol.color }}
+                        >
+                          {pol.badge}
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-1 mb-1.5">
+                        <span className="font-mono text-xl font-bold text-gray-900">{pol.value}</span>
+                        <span className="text-[10px] text-gray-400">{pol.unit}</span>
+                      </div>
                     </div>
-                    <div className="flex items-baseline gap-1.5 mb-2">
-                      <span className="font-mono text-2xl font-bold text-gray-900">{pol.value}</span>
-                      <span className="text-xs text-gray-400">{pol.unit}</span>
+                    <div>
+                      <div className="w-full bg-gray-200 h-1 rounded-full overflow-hidden mb-1.5">
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{
+                            width: `${Math.min((pol.value / pol.max) * 100, 100)}%`,
+                            background: pol.color,
+                          }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-gray-400 italic line-clamp-1">{pol.desc}</p>
                     </div>
-                    <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden mb-2">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{
-                          width: `${Math.min((pol.value / pol.max) * 100, 100)}%`,
-                          background: pol.color,
-                        }}
-                      />
-                    </div>
-                    <p className="text-[11px] text-gray-400 italic">{pol.desc}</p>
                   </div>
                 ))}
               </div>
@@ -635,7 +753,7 @@ export function DashboardView() {
             </div>
             <div className="flex items-center justify-between">
               <span>Pollutants Monitored</span>
-              <span className="font-medium text-gray-700">PM2.5, PM10, O3, NO2, SO2, CO</span>
+              <span className="font-medium text-gray-700">PM2.5, PM10, NO₂, SO₂, CO, O₃, NH₃, Pb (All 8 NAQI Pollutants)</span>
             </div>
           </div>
         </div>

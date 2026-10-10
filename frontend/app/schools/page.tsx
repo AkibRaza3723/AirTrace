@@ -633,6 +633,7 @@ export default function CampusDecisionPage() {
         <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3.5">
 
           {/* Hero Institutional Decision Protocol Spotlight Banner */}
+
           {decisionResult && (
             <div className={cn("p-4 rounded-2xl border shadow-xs transition-all", theme.lightBanner)}>
               <div className="flex flex-wrap items-start justify-between gap-3">

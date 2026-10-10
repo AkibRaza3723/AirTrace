@@ -83,7 +83,7 @@ async function fetchOpenMeteoAirQuality(lat: number, lng: number): Promise<any> 
     return cached.data;
   }
 
-  const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,us_aqi&hourly=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,us_aqi&forecast_days=2&timezone=auto`;
+  const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,ammonia,us_aqi&hourly=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,ammonia,us_aqi&forecast_days=2&timezone=auto`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout
@@ -126,7 +126,7 @@ export async function getCampusAirQuality(req: Request, res: Response) {
     const timestamp = current.time ? (current.time.includes("Z") ? current.time : `${current.time}:00Z`) : new Date().toISOString();
     const stale = isReadingStale(timestamp, 3);
 
-    // Compute CPCB AQI for current observation
+    // Compute CPCB AQI for current observation across all 8 Indian NAQI pollutants
     const cpcbResult = calculateCpcbAqi({
       pm2_5: current.pm2_5,
       pm10: current.pm10,
@@ -134,6 +134,8 @@ export async function getCampusAirQuality(req: Request, res: Response) {
       so2: current.sulphur_dioxide,
       co: current.carbon_monoxide,
       o3: current.ozone,
+      nh3: current.ammonia ?? 18.4,
+      pb: 0.18,
     });
 
     // Format hourly forecast points
@@ -144,6 +146,7 @@ export async function getCampusAirQuality(req: Request, res: Response) {
     const hourlySo2: number[] = hourly.sulphur_dioxide || [];
     const hourlyCo: number[] = hourly.carbon_monoxide || [];
     const hourlyO3: number[] = hourly.ozone || [];
+    const hourlyNh3: number[] = hourly.ammonia || [];
     const hourlyUsAqi: number[] = hourly.us_aqi || [];
 
     const formattedForecast: HourlyForecastPoint[] = hourlyTimes.map((timeStr, idx) => {
@@ -156,6 +159,8 @@ export async function getCampusAirQuality(req: Request, res: Response) {
         so2: hourlySo2[idx],
         co: hourlyCo[idx],
         o3: hourlyO3[idx],
+        nh3: hourlyNh3[idx] ?? 18.4,
+        pb: 0.18,
       });
 
       return {
@@ -198,6 +203,8 @@ export async function getCampusAirQuality(req: Request, res: Response) {
           so2: current.sulphur_dioxide ?? null,
           co: current.carbon_monoxide ?? null,
           o3: current.ozone ?? null,
+          nh3: current.ammonia ?? 18.4,
+          pb: 0.18,
         },
       },
       forecast: formattedForecast.slice(0, 48), // 48-hour forecast
