@@ -13,6 +13,13 @@ export interface CampusProfile {
 
 export type ProfessionType = "STUDENT" | "PROFESSIONAL";
 
+export type UserRole =
+  | "Student"
+  | "Professional"
+  | "Faculty / Researcher"
+  | "Campus Safety Officer"
+  | "Environmental Health Officer";
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -24,7 +31,7 @@ export interface UserProfile {
   preferredLng?: number | null;
   campusProfile?: CampusProfile | null;
   // Compatibility helpers
-  role: "Student" | "Professional";
+  role: UserRole;
   college: string;
   isLoggedIn: boolean;
   createdAt?: string;

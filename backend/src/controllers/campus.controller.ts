@@ -165,14 +165,14 @@ export async function getCampusAirQuality(req: Request, res: Response) {
 
       return {
         time: timeStr,
-        pm2_5: Number(pm25Val.toFixed(1)),
-        pm10: Number(pm10Val.toFixed(1)),
-        no2: hourlyNo2[idx] !== undefined ? Number(hourlyNo2[idx].toFixed(1)) : undefined,
-        so2: hourlySo2[idx] !== undefined ? Number(hourlySo2[idx].toFixed(1)) : undefined,
-        co: hourlyCo[idx] !== undefined ? Number(hourlyCo[idx].toFixed(1)) : undefined,
-        o3: hourlyO3[idx] !== undefined ? Number(hourlyO3[idx].toFixed(1)) : undefined,
+        pm2_5: Number((pm25Val ?? 0).toFixed(1)),
+        pm10: Number((pm10Val ?? 0).toFixed(1)),
+        no2: hourlyNo2[idx] != null ? Number(hourlyNo2[idx].toFixed(1)) : undefined,
+        so2: hourlySo2[idx] != null ? Number(hourlySo2[idx].toFixed(1)) : undefined,
+        co: hourlyCo[idx] != null ? Number(hourlyCo[idx].toFixed(1)) : undefined,
+        o3: hourlyO3[idx] != null ? Number(hourlyO3[idx].toFixed(1)) : undefined,
         cpcbAqi: hourlyCpcb.aqi,
-        usAqi: hourlyUsAqi[idx] ? Math.round(hourlyUsAqi[idx]) : undefined,
+        usAqi: hourlyUsAqi[idx] != null ? Math.round(hourlyUsAqi[idx]) : undefined,
       };
     });
 

@@ -23,7 +23,7 @@ const testSignupSchema = z
         "Password must contain at least one letter and one number"
       ),
     confirmPassword: z.string(),
-    profession: z.enum(["STUDENT", "PROFESSIONAL"]),
+    profession: z.enum(["STUDENT", "PROFESSIONAL"] as const),
     campusName: z.string().trim().optional(),
     campusLatitude: z.number().min(-90).max(90).optional(),
     campusLongitude: z.number().min(-180).max(180).optional(),
@@ -40,7 +40,7 @@ const testSignupSchema = z
 function validateRegistrationInput(input: any): { valid: boolean; error?: string } {
   const result = testSignupSchema.safeParse(input);
   if (!result.success) {
-    return { valid: false, error: result.error.errors[0]?.message };
+    return { valid: false, error: result.error.issues[0]?.message };
   }
 
   const data = result.data;

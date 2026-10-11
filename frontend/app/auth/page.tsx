@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useAuth, ProfessionType } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
@@ -117,6 +118,7 @@ function AuthContent() {
         if (res.ok) {
           const data = await res.json();
           setCampusSearchResults(data.places || []);
+        }
       } catch {
         // Silently catch geocode errors
       } finally {

@@ -302,7 +302,7 @@ export async function planRoute(req: Request, res: Response) {
       );
     }
 
-    const osrmData = await osrmRes.json();
+    const osrmData = (await osrmRes.json()) as any;
 
     if (osrmData.code !== "Ok" || !osrmData.routes || osrmData.routes.length === 0) {
       return sendError(
@@ -410,7 +410,7 @@ export async function planRoute(req: Request, res: Response) {
     let fastestIdx = 0;
     let fastestDuration = routes[0]?.durationMin ?? 0;
 
-    routes.forEach((r, idx) => {
+    routes.forEach((r: any, idx: number) => {
       if (r.exposureIndex < lowestExposureVal) {
         lowestExposureVal = r.exposureIndex;
         lowestExposureIdx = idx;
@@ -429,7 +429,7 @@ export async function planRoute(req: Request, res: Response) {
         : 0;
 
     // Assign labels and badges based on health & time
-    routes.forEach((r, idx) => {
+    routes.forEach((r: any, idx: number) => {
       const isHealthiest = idx === lowestExposureIdx;
       const isFast = idx === fastestIdx;
       (r as any).isHealthOptimal = isHealthiest;
@@ -451,12 +451,12 @@ export async function planRoute(req: Request, res: Response) {
       }
     });
 
-    // 4. Generate AI Environmental Health Report using OpenAI Service
+    // 4. Generate AI Environmental Health Report using AWS Bedrock Service
     const aiHealthAssessment = await generateRouteAiHealthAssessment({
       originName: origin.name || "Origin",
       destinationName: destination.name || "Destination",
       travelMode: profile === "walking" ? "walking" : profile === "cycling" ? "cycling" : "driving",
-      routes: routes.map((r) => ({
+      routes: routes.map((r: any) => ({
         index: r.index,
         label: r.label,
         distanceKm: r.distanceKm,
@@ -486,7 +486,7 @@ export async function planRoute(req: Request, res: Response) {
         );
       }
 
-      const anyHighPeak = routes.find((r) => r.peakAqi > 200);
+      const anyHighPeak = routes.find((r: any) => r.peakAqi > 200);
       if (anyHighPeak) {
         insights.push(
           `Route ${String.fromCharCode(65 + anyHighPeak.index)} intersects a high-pollution hotspot (Peak AQI ${anyHighPeak.peakAqi}). Vulnerable commuters should take precautions.`
@@ -502,7 +502,7 @@ export async function planRoute(req: Request, res: Response) {
       exposureSavingPercent,
       aiHealthAssessment,
       insights,
-      dataSource: "OSRM (routing) + Open-Meteo (AQI) + OpenAI (Medical Intelligence)",
+      dataSource: "OSRM (routing) + Open-Meteo (AQI) + AWS Bedrock (Medical Intelligence)",
       pollutionScoreStandard: "CPCB Sub-Index Formulation + WHO Inhaled Particulate Model",
       fetchedAt: new Date().toISOString(),
     });

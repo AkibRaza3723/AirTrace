@@ -23,29 +23,29 @@ function buildExplanationSystemPrompt(decisionResult: CampusDecisionResult): str
   const { currentConditions, activity, slotComparison, decisionCategory, primaryRecommendation, reasons } =
     decisionResult;
 
-  const current = currentConditions || {};
+  const current = currentConditions;
   const planned = slotComparison?.plannedSlot;
   const alt = slotComparison?.alternativeSlot;
 
   return `You are BreatheWise Campus Air Intelligence Advisor, an expert institutional environmental health and safety consultant assisting school principals, athletic directors, collegiate administrators, teachers, and students.
 
 CURRENT REAL-TIME CAMPUS ENVIRONMENTAL TELEMETRY:
-- Campus Location: ${current.stationName ? current.stationName : "Campus Coordinates"}
-- Monitoring Station: ${current.stationName || "Atmospheric Grid Point"}${current.distanceKm ? ` (${current.distanceKm} km away)` : ""}
-- Station Type: ${current.isPhysicalStation ? "Physical CPCB CAAQMS Continuous Ambient Station" : "High-Resolution Atmospheric Model Grid"}
-- CPCB Indian NAQI: ${current.aqi ?? "N/A"} (${current.category ?? "Unknown"})
-- Prominent Pollutant: ${current.prominentPollutant ?? "Particulate Matter"}
-- Particulate Matter (PM2.5): ${current.pm2_5 !== null && current.pm2_5 !== undefined ? `${current.pm2_5} µg/m³ (CPCB 24-hr Standard: 60 µg/m³)` : "N/A"}
-- Coarse Particulates (PM10): ${current.pm10 !== null && current.pm10 !== undefined ? `${current.pm10} µg/m³ (CPCB 24-hr Standard: 100 µg/m³)` : "N/A"}
-- Nitrogen Dioxide (NO₂): ${current.no2 !== null && current.no2 !== undefined ? `${current.no2} µg/m³ (Standard: 80 µg/m³)` : "N/A"}
-- Sulphur Dioxide (SO₂): ${current.so2 !== null && current.so2 !== undefined ? `${current.so2} µg/m³` : "N/A"}
-- Carbon Monoxide (CO): ${current.co !== null && current.co !== undefined ? `${current.co} mg/m³` : "N/A"}
-- Ozone (O₃): ${current.o3 !== null && current.o3 !== undefined ? `${current.o3} µg/m³` : "N/A"}
+- Campus Location: ${current?.stationName ? current.stationName : "Campus Coordinates"}
+- Monitoring Station: ${current?.stationName || "Atmospheric Grid Point"}${current?.distanceKm ? ` (${current.distanceKm} km away)` : ""}
+- Station Type: ${current?.isPhysicalStation ? "Physical CPCB CAAQMS Continuous Ambient Station" : "High-Resolution Atmospheric Model Grid"}
+- CPCB Indian NAQI: ${current?.aqi ?? "N/A"} (${current?.category ?? "Unknown"})
+- Prominent Pollutant: ${current?.prominentPollutant ?? "Particulate Matter"}
+- Particulate Matter (PM2.5): ${current?.pm2_5 !== null && current?.pm2_5 !== undefined ? `${current.pm2_5} µg/m³ (CPCB 24-hr Standard: 60 µg/m³)` : "N/A"}
+- Coarse Particulates (PM10): ${current?.pm10 !== null && current?.pm10 !== undefined ? `${current.pm10} µg/m³ (CPCB 24-hr Standard: 100 µg/m³)` : "N/A"}
+- Nitrogen Dioxide (NO₂): ${current?.no2 !== null && current?.no2 !== undefined ? `${current.no2} µg/m³ (Standard: 80 µg/m³)` : "N/A"}
+- Sulphur Dioxide (SO₂): ${current?.so2 !== null && current?.so2 !== undefined ? `${current.so2} µg/m³` : "N/A"}
+- Carbon Monoxide (CO): ${current?.co !== null && current?.co !== undefined ? `${current.co} mg/m³` : "N/A"}
+- Ozone (O₃): ${current?.o3 !== null && current?.o3 !== undefined ? `${current.o3} µg/m³` : "N/A"}
 
 SCHEDULED CAMPUS ACTIVITY CONTEXT:
 - Activity Type: ${activity?.displayName || "Campus Outdoor Activity"}
 - Exertion Level: ${activity?.exertionLevel || "Standard"}
-- Official Regulatory Policy: ${activity?.officialSource || "CPCB Institutional Guidelines"}
+- Official Regulatory Policy: ${activity?.officialPolicySource || (activity as any)?.officialSource || "CPCB Institutional Guidelines"}
 - Planned Schedule Window: ${planned ? `${planned.startTime} - ${planned.endTime} (Forecast Avg AQI: ${planned.averageAqi}, Peak PM2.5: ${planned.peakPm25} µg/m³)` : "Current observation window"}
 ${alt ? `- Alternative Schedule Window: ${alt.startTime} - ${alt.endTime} (Forecast Avg AQI: ${alt.averageAqi}, Peak PM2.5: ${alt.peakPm25} µg/m³)` : ""}
 - Engine Decision Category: "${decisionCategory}"
@@ -62,7 +62,7 @@ CAMPUS REGULATORY STANDARDS & ACTIVITY PERMISSION RULES (CPCB & NPCCHH INDIA):
 
 YOUR INSTRUCTIONS:
 - You are here to answer ANY questions about campus operations, pollution levels, student health, and allowed activities.
-- When answering user questions, ALWAYS refer specifically to the current pollutant readings (e.g. quoting PM2.5: ${current.pm2_5 ?? "N/A"} µg/m³ or AQI: ${current.aqi ?? "N/A"}).
+- When answering user questions, ALWAYS refer specifically to the current pollutant readings (e.g. quoting PM2.5: ${current?.pm2_5 ?? "N/A"} µg/m³ or AQI: ${current?.aqi ?? "N/A"}).
 - State clearly whether the activity or request is:
   ✅ APPROVED (Full Permission)
   ⚠️ RESTRICTED / MODIFIED (Requires Precautions)
@@ -112,7 +112,7 @@ export function generateDeterministicFallbackExplanation(
     );
   }
 
-  return `### Executive Campus Air Summary
+  return `### Executive Summary
 The Campus Decision Engine has designated this window as **"${decisionCategory}"**. ${primaryRecommendation}
 
 ### Real-Time Atmospheric Conditions
@@ -131,8 +131,8 @@ Readings sourced from ${currentConditions?.source || "Official CPCB / Open-Meteo
 }
 
 /**
- * Explains a campus air decision and answers user queries using OpenAI (GPT-4o-mini)
- * or AWS Bedrock, with automatic graceful fallback.
+ * Explains a campus air decision and answers user queries using AWS Bedrock,
+ * with automatic graceful fallback to the deterministic heuristic engine.
  */
 export async function explainCampusDecisionWithBedrock(
   decisionResult: CampusDecisionResult,
@@ -140,7 +140,7 @@ export async function explainCampusDecisionWithBedrock(
 ): Promise<{
   explanation: string;
   isAiGenerated: boolean;
-  provider: "OpenAI" | "AWS Bedrock" | "Rule Engine";
+  provider: "AWS Bedrock" | "Rule Engine";
   modelId: string;
   usedFallbackReason?: string;
 }> {
@@ -153,49 +153,11 @@ export async function explainCampusDecisionWithBedrock(
 Please give a comprehensive, authoritative, and direct answer based on the real-time campus air quality telemetry, pollutant numbers, and regulatory rules in your instructions.`
     : `Please explain the campus air quality evaluation and scheduled activity recommendation based on the current telemetry in your instructions.`;
 
-  // ─── 1. Primary AI Provider: OpenAI (GPT-4o-mini) ─────────────────────
-  if (env.OPENAI_API_KEY && env.OPENAI_API_KEY.trim().length > 0) {
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${env.OPENAI_API_KEY.trim()}`,
-        },
-        body: JSON.stringify({
-          model: env.OPENAI_MODEL || "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: promptMessage },
-          ],
-          temperature: 0.25,
-          max_tokens: 1000,
-        }),
-        signal: AbortSignal.timeout(12000),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const replyText = data.choices?.[0]?.message?.content;
-        if (replyText && replyText.trim().length > 0) {
-          return {
-            explanation: replyText,
-            isAiGenerated: true,
-            provider: "OpenAI",
-            modelId: env.OPENAI_MODEL || "gpt-4o-mini",
-          };
-        }
-      }
-    } catch {
-      // Fallback silently to secondary provider
-    }
-  }
-
-  // ─── 2. Secondary AI Provider: AWS Bedrock Claude ─────────────────────
+  // ─── AWS Bedrock Provider ─────────────────────────────────────────────
   const bedrockClient = getBedrockClient();
   if (bedrockClient) {
     try {
-      const modelId = env.AWS_BEDROCK_MODEL_ID || "anthropic.claude-3-haiku-20240307-v1:0";
+      const modelId = env.AWS_BEDROCK_MODEL_ID || "amazon.nova-lite-v1:0";
 
       const command = new ConverseCommand({
         modelId,
@@ -224,19 +186,17 @@ Please give a comprehensive, authoritative, and direct answer based on the real-
           modelId,
         };
       }
-    } catch {
-      // Fallback silently to deterministic heuristic
+    } catch (err: any) {
+      console.warn("Bedrock campus explanation failed, falling back to rule engine:", err?.message || err);
     }
   }
 
-  // ─── 3. Deterministic Heuristic Fallback (Zero Crash) ─────────────────
+  // ─── Deterministic Heuristic Fallback (Zero Crash) ─────────────────
   return {
     explanation: generateDeterministicFallbackExplanation(decisionResult, userQuestion),
     isAiGenerated: false,
     provider: "Rule Engine",
     modelId: "deterministic-rule-engine-fallback",
-    usedFallbackReason: env.OPENAI_API_KEY
-      ? "AI service temporarily unreachable. Generated via BreatheWise Rule Engine."
-      : "OpenAI API key pending in backend .env (OPENAI_API_KEY). Using verified CPCB rule heuristics.",
+    usedFallbackReason: "AWS Bedrock unavailable or credentials pending in backend .env. Using verified CPCB rule heuristics.",
   };
 }

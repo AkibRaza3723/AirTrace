@@ -1,3 +1,4 @@
+import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import { env } from "../config/env.js";
 
 export interface RouteHealthAssessmentInput {
@@ -39,9 +40,22 @@ export interface RouteAiHealthReport {
   isMockFallback: boolean;
 }
 
+function getBedrockClient(): BedrockRuntimeClient | null {
+  if (!env.AWS_ACCESS_KEY_ID || !env.AWS_SECRET_ACCESS_KEY) {
+    return null;
+  }
+  return new BedrockRuntimeClient({
+    region: env.AWS_REGION || "us-east-1",
+    credentials: {
+      accessKeyId: env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+    },
+  });
+}
+
 /**
  * Generates an end-to-end AI clinical health analysis for alternative routes.
- * Uses OpenAI API (gpt-4o-mini) when OPENAI_API_KEY is configured in .env.
+ * Uses AWS Bedrock when credentials are configured in .env.
  * Gracefully falls back to deterministic rule-based health heuristics when key is not yet set.
  */
 export async function generateRouteAiHealthAssessment(
@@ -74,10 +88,7 @@ export async function generateRouteAiHealthAssessment(
       : 0;
   const timeDifferenceMin = healthiest && fastest ? healthiest.durationMin - fastest.durationMin : 0;
 
-  // Check if OpenAI API Key is configured
-  if (env.OPENAI_API_KEY && env.OPENAI_API_KEY.trim().length > 0) {
-    try {
-      const systemPrompt = `You are BreatheWise AI, an expert Environmental Health & Inhalation Toxicologist.
+  const systemPrompt = `You are BreatheWise AI, an expert Environmental Health & Inhalation Toxicologist.
 Analyze the user's alternative travel routes between "${originName}" and "${destinationName}" (${travelMode} mode).
 Your goal is to judge which route minimizes lung inflammation and cumulative particulate inhalation.
 
@@ -105,7 +116,7 @@ Always return valid JSON matching this schema:
   ]
 }`;
 
-      const userPrompt = `Compare these alternative routes for a ${travelMode} commuter:
+  const userPrompt = `Compare these alternative routes for a ${travelMode} commuter:
 ${routes
   .map(
     (r) =>
@@ -118,58 +129,60 @@ ${routes
   )
   .join("\n\n")}`;
 
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${env.OPENAI_API_KEY.trim()}`,
+  // AWS Bedrock Provider
+  const client = getBedrockClient();
+  if (client) {
+    try {
+      const modelId = env.AWS_BEDROCK_MODEL_ID || "amazon.nova-lite-v1:0";
+
+      const command = new ConverseCommand({
+        modelId,
+        system: [{ text: systemPrompt }],
+        messages: [
+          {
+            role: "user",
+            content: [{ text: userPrompt }],
+          },
+        ],
+        inferenceConfig: {
+          maxTokens: 1000,
+          temperature: 0.2,
         },
-        body: JSON.stringify({
-          model: env.OPENAI_MODEL || "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.3,
-        }),
-        signal: AbortSignal.timeout(12000),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (content) {
-          const parsed = JSON.parse(content);
-          return {
-            recommendedRouteIndex:
-              typeof parsed.recommendedRouteIndex === "number"
-                ? parsed.recommendedRouteIndex
-                : lowestExposureIdx,
-            verdictHeadline: parsed.verdictHeadline || "Health analysis computed via OpenAI.",
-            clinicalTradeoff: parsed.clinicalTradeoff || "",
-            routeSpecificInsights: parsed.routeSpecificInsights || [],
-            vulnerableGroupsAdvice: parsed.vulnerableGroupsAdvice || {
-              asthmaAndRespiratory: "Monitor shortness of breath.",
-              childrenAndElderly: "Prefer the route with lowest exposure score.",
-              activeCommuters: "Wear protective filtration during peak transit.",
-            },
-            protectiveActions: parsed.protectiveActions || [
-              "Keep vehicle cabin air on recirculate mode.",
-              "Wear an N95 mask if walking or cycling.",
-            ],
-            aiProvider: "OpenAI",
-            model: env.OPENAI_MODEL || "gpt-4o-mini",
-            isMockFallback: false,
-          };
-        }
+      const response = await client.send(command);
+      const content = response.output?.message?.content?.[0]?.text;
+      if (content) {
+        const cleaned = content.replace(/```json/gi, "").replace(/```/g, "").trim();
+        const parsed = JSON.parse(cleaned);
+        return {
+          recommendedRouteIndex:
+            typeof parsed.recommendedRouteIndex === "number"
+              ? parsed.recommendedRouteIndex
+              : lowestExposureIdx,
+          verdictHeadline: parsed.verdictHeadline || "Health analysis computed via AWS Bedrock.",
+          clinicalTradeoff: parsed.clinicalTradeoff || "",
+          routeSpecificInsights: parsed.routeSpecificInsights || [],
+          vulnerableGroupsAdvice: parsed.vulnerableGroupsAdvice || {
+            asthmaAndRespiratory: "Monitor shortness of breath.",
+            childrenAndElderly: "Prefer the route with lowest exposure score.",
+            activeCommuters: "Wear protective filtration during peak transit.",
+          },
+          protectiveActions: parsed.protectiveActions || [
+            "Keep vehicle cabin air on recirculate mode.",
+            "Wear an N95 mask if walking or cycling.",
+          ],
+          aiProvider: "AWS Bedrock",
+          model: modelId,
+          isMockFallback: false,
+        };
       }
-    } catch {
-      // Fallback silently to algorithmic heuristics
+    } catch (err: any) {
+      console.warn("Bedrock route analysis failed, falling back to heuristic engine:", err?.message || err);
     }
   }
 
-  // ─── Heuristic Fallback Engine (Zero Crash when OPENAI_API_KEY is pending) ─────
+  // ─── Heuristic Fallback Engine (Zero Crash when Bedrock is pending) ─────
   const isHealthyDifferentFromFastest = lowestExposureIdx !== fastestIdx && exposureSavingPercent >= 10;
 
   const headline = isHealthyDifferentFromFastest
@@ -222,8 +235,8 @@ ${routes
         : "Wear an airtight N95/FFP2 respirator to filter fine particulate matter (PM2.5).",
       "Avoid travel during the early morning rush hour inversion when ground pollutants are trapped.",
     ],
-    aiProvider: "BreatheWise Health Engine (OpenAI Ready)",
-    model: env.OPENAI_MODEL || "gpt-4o-mini",
+    aiProvider: "BreatheWise Health Engine (Bedrock Ready)",
+    model: env.AWS_BEDROCK_MODEL_ID || "amazon.nova-lite-v1:0",
     isMockFallback: true,
   };
 }

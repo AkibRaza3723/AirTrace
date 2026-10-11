@@ -179,6 +179,12 @@ export interface CampusDecisionResult {
     stationName: string;
     distanceKm: number | null;
     isPhysicalStation: boolean;
+    pm2_5?: number | null;
+    pm10?: number | null;
+    no2?: number | null;
+    so2?: number | null;
+    co?: number | null;
+    o3?: number | null;
   } | null;
   slotComparison: {
     plannedSlot: SlotAnalysis | null;
@@ -372,6 +378,12 @@ export function evaluateCampusDecision(input: CampusDecisionInput): CampusDecisi
         stationName: obs.stationName || "Campus Atmospheric Telemetry Station",
         distanceKm: obs.distanceKm ?? null,
         isPhysicalStation: obs.isPhysicalStation ?? false,
+        pm2_5: obs.pm2_5 ?? null,
+        pm10: obs.pm10 ?? null,
+        no2: obs.no2 ?? null,
+        so2: obs.so2 ?? null,
+        co: obs.co ?? null,
+        o3: obs.o3 ?? null,
       };
 
       if (!obs.isPhysicalStation) {

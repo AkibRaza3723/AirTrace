@@ -57,10 +57,8 @@ const signupSchema = z
         "Password must contain at least one letter and one number"
       ),
     confirmPassword: z.string(),
-    profession: z.enum(["STUDENT", "PROFESSIONAL"], {
-      errorMap: () => ({
-        message: "Profession must be either STUDENT or PROFESSIONAL",
-      }),
+    profession: z.enum(["STUDENT", "PROFESSIONAL"] as const, {
+      message: "Profession must be either STUDENT or PROFESSIONAL",
     }),
     // Student-specific fields
     campusName: z.string().trim().optional(),
@@ -89,11 +87,11 @@ const loginSchema = z.object({
 const campusProfileSchema = z.object({
   campusName: z.string().trim().min(2, "Campus name is required"),
   campusLatitude: z
-    .number({ required_error: "Campus latitude is required" })
+    .number({ message: "Campus latitude is required" })
     .min(-90)
     .max(90),
   campusLongitude: z
-    .number({ required_error: "Campus longitude is required" })
+    .number({ message: "Campus longitude is required" })
     .min(-180)
     .max(180),
   campusAddress: z.string().trim().optional().nullable(),
@@ -115,7 +113,7 @@ export async function signup(req: Request, res: Response) {
   try {
     const parseResult = signupSchema.safeParse(req.body);
     if (!parseResult.success) {
-      const firstError = parseResult.error.errors[0]?.message || "Validation failed";
+      const firstError = parseResult.error.issues[0]?.message || "Validation failed";
       return res.status(400).json({
         success: false,
         error: firstError,
@@ -174,7 +172,7 @@ export async function signup(req: Request, res: Response) {
     });
 
     if (!authRes.ok) {
-      const errBody = await authRes.json().catch(() => ({}));
+      const errBody = (await authRes.json().catch(() => ({}))) as any;
       logger.error("Better Auth signup error:", errBody);
       return res.status(authRes.status || 400).json({
         success: false,
@@ -188,7 +186,7 @@ export async function signup(req: Request, res: Response) {
       if (cookie) res.append("Set-Cookie", cookie);
     }
 
-    const authData = await authRes.json();
+    const authData = (await authRes.json()) as any;
     const createdUser = authData.user;
 
     // Save Student CampusProfile if student
@@ -248,7 +246,7 @@ export async function login(req: Request, res: Response) {
     if (!parseResult.success) {
       return res.status(400).json({
         success: false,
-        error: parseResult.error.errors[0]?.message || "Invalid email or password format",
+        error: parseResult.error.issues[0]?.message || "Invalid email or password format",
       });
     }
 
@@ -276,7 +274,7 @@ export async function login(req: Request, res: Response) {
       if (cookie) res.append("Set-Cookie", cookie);
     }
 
-    const authData = await authRes.json();
+    const authData = (await authRes.json()) as any;
     const loggedInUser = authData.user;
 
     // Fetch user details and campus profile
@@ -430,7 +428,7 @@ export async function updateProfile(req: Request, res: Response) {
     if (!parseResult.success) {
       return res.status(400).json({
         success: false,
-        error: parseResult.error.errors[0]?.message || "Invalid update data",
+        error: parseResult.error.issues[0]?.message || "Invalid update data",
       });
     }
 
@@ -496,7 +494,7 @@ export async function updateCampusProfile(req: Request, res: Response) {
     if (!parseResult.success) {
       return res.status(400).json({
         success: false,
-        error: parseResult.error.errors[0]?.message || "Invalid campus data",
+        error: parseResult.error.issues[0]?.message || "Invalid campus data",
       });
     }
 

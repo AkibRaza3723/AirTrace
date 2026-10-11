@@ -46,6 +46,19 @@ const ROLE_CONFIG: Record<
     defaultDetail: "B.Tech Computer Science",
     idIcon: "🎓",
   },
+  "Professional": {
+    title: "Professional Workplace Credentials",
+    description: "Provide your professional designation and organization or workplace location.",
+    idLabel: "Employee / Professional ID",
+    idPlaceholder: "e.g. EMP-TECH-882 or COR-DEL-10",
+    idHelp: "Your organization employee or professional ID.",
+    detailLabel: "Organization / Industry Sector",
+    detailPlaceholder: "e.g. Technology / Consulting / Healthcare",
+    detailHelp: "Your professional industry or company name.",
+    defaultId: "EMP-TECH-882",
+    defaultDetail: "Enterprise Technology & Operations",
+    idIcon: "💼",
+  },
   "Faculty / Researcher": {
     title: "Faculty & Researcher Credentials",
     description: "Provide your academic employee ID and research laboratory or department.",
@@ -110,16 +123,10 @@ export function OnboardingModal() {
     setIsVerifying(true);
     setTimeout(() => {
       setIsVerifying(false);
-      login({
-        name: formData.name || "Alex Morgan",
-        email: formData.email || "user@campus.edu",
-        college: formData.college || "Delhi Technological University (DTU)",
-        role: formData.role,
-        roleId: formData.roleId || currentRoleConfig.defaultId,
-        roleDetails: formData.roleDetails || currentRoleConfig.defaultDetail,
-        studentId: formData.roleId || currentRoleConfig.defaultId,
-        deanAuthId: "AUTH-VERIFIED",
-      });
+      login(
+        formData.email || "demo@campus.edu",
+        formData.password || "Password123"
+      );
       setStep(1);
     }, 800);
   };
