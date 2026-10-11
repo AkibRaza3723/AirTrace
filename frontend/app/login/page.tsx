@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthPage from "../auth/page";
 
-export default function LoginPage() {
+function LoginRedirect() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -15,4 +15,12 @@ export default function LoginPage() {
   }, [router, searchParams]);
 
   return <AuthPage />;
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<AuthPage />}>
+      <LoginRedirect />
+    </Suspense>
+  );
 }
