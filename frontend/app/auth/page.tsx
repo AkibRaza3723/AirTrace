@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useAuth, ProfessionType } from "@/lib/auth-context";
+import { API_BASE_URL } from "@/lib/api-config";
 import { cn } from "@/lib/utils";
 
 interface GeocodeItem {
@@ -39,7 +40,7 @@ function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading, login, signup } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+  const apiUrl = API_BASE_URL;
 
   const initialMode = searchParams.get("mode") === "signup" ? "signup" : "login";
   const returnTo = searchParams.get("returnTo") || "/dashboard";

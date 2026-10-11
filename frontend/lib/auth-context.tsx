@@ -2,8 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { authClient } from "./auth-client";
+import { API_BASE_URL } from "./api-config";
 
-export { authClient };
+export { authClient, API_BASE_URL };
 
 export interface CampusProfile {
   id?: string;
@@ -110,7 +111,7 @@ function mapBackendUser(backendUser: any): UserProfile {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+  const apiUrl = API_BASE_URL;
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);

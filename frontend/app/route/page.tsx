@@ -9,8 +9,9 @@ import {
   Car, Bike, Footprints, CheckCircle2, ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { API_BASE_URL } from "@/lib/api-config";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+const BACKEND_URL = API_BASE_URL;
 
 // ─── Types ──────────────────────────────────────────────────
 interface GeocodedPlace {

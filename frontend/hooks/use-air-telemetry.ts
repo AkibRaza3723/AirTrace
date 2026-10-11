@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { API_BASE_URL } from "@/lib/api-config";
 
 export interface AirTelemetryData {
   location: { lat: number; lng: number };
@@ -34,7 +35,7 @@ export interface AirTelemetryData {
   source: string;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+const BACKEND_URL = API_BASE_URL;
 
 export function useAirTelemetry() {
   const [telemetry, setTelemetry] = useState<AirTelemetryData | null>(null);

@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth-context";
+import { API_BASE_URL } from "@/lib/api-config";
 
 // Dynamic map preview to prevent SSR Leaflet errors
 const CampusMapPreview = dynamic(
@@ -47,7 +48,7 @@ interface GeocodePlace {
 export default function StudentOnboardingPage() {
   const router = useRouter();
   const { user, isLoading, updateCampusProfile } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+  const apiUrl = API_BASE_URL;
 
   const [campusName, setCampusName] = useState(
     user?.campusProfile?.campusName || "Indian Institute of Technology Delhi"

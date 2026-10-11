@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
 import { useAirTelemetry } from "@/hooks/use-air-telemetry";
+import { API_BASE_URL } from "@/lib/api-config";
 
 // Preset Indian Collegiate Campuses
 interface CampusPreset {
@@ -137,7 +138,7 @@ function getDateOffset(baseDateStr: string, offsetDays: number): string {
 }
 
 export default function CampusDecisionPage() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+  const apiUrl = API_BASE_URL;
   const { user } = useAuth();
   const { telemetry: dashboardTelemetry } = useAirTelemetry();
 

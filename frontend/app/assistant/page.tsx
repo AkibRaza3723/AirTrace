@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAirTelemetry } from "@/hooks/use-air-telemetry";
 import { useAuth } from "@/lib/auth-context";
+import { API_BASE_URL } from "@/lib/api-config";
 
 interface Message {
   id: string;
@@ -201,8 +202,7 @@ export default function AssistantPage() {
     setIsTyping(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
-      const res = await fetch(`${apiUrl}/api/assistant/chat`, {
+      const res = await fetch(`${API_BASE_URL}/api/assistant/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -239,7 +239,7 @@ export default function AssistantPage() {
           id: (Date.now() + 1).toString(),
           sender: "bot",
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          text: `⚠️ **Connection Notice:** Could not communicate with AirTrace assistant service (${err.message}). Ensure backend server is reachable on port 5001.`,
+          text: `⚠️ **Connection Notice:** Could not communicate with AirTrace assistant service (${err.message}). Ensure backend server is reachable at ${API_BASE_URL}.`,
         },
       ]);
     } finally {
