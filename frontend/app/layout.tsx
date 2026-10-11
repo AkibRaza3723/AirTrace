@@ -28,9 +28,18 @@ const fontHeadline = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "AirTrace / BreatheWise — Actionable Air Intelligence",
+  title: "AirTrace — Actionable Air Intelligence",
   description:
     "Personal exposure tracking, pollution-aware routing, and grounded AI air assistance. Know what you breathe.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+  },
 };
 
 export default function RootLayout({
