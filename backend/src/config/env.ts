@@ -25,7 +25,7 @@ export const env = {
   AWS_REGION: process.env.AWS_REGION || "us-east-1",
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || "",
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || "",
-  AWS_BEDROCK_MODEL_ID: process.env.AWS_BEDROCK_MODEL_ID || "anthropic.claude-3-haiku-20240307-v1:0",
+  AWS_BEDROCK_MODEL_ID: process.env.AWS_BEDROCK_MODEL_ID || "amazon.nova-lite-v1:0",
 
   // OpenAI Configuration
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",

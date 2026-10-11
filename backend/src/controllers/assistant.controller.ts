@@ -87,11 +87,46 @@ export async function askAirAssistant(req: Request, res: Response) {
     const systemPrompt = buildSystemPrompt(telemetry);
 
     // Format conversation messages for AWS Bedrock Converse API
-    const formattedMessages = [
-      ...history.slice(-6).map((h: any) => ({
-        role: h.sender === "user" ? ("user" as const) : ("assistant" as const),
+    // Bedrock rules:
+    // 1. Must start with role: "user" (no initial bot welcome message)
+    // 2. Roles must strictly alternate: user -> assistant -> user -> assistant
+    const rawHistory = Array.isArray(history) ? history : [];
+    
+    // Find index of first user message to strip leading UI welcome messages
+    const firstUserIndex = rawHistory.findIndex((h: any) => h.sender === "user");
+    const validHistory = firstUserIndex !== -1 ? rawHistory.slice(firstUserIndex) : [];
+
+    const sanitizedHistory: Array<{ role: "user" | "assistant"; content: [{ text: string }] }> = [];
+
+    for (const h of validHistory) {
+      if (!h.text || typeof h.text !== "string" || !h.text.trim()) continue;
+      const role: "user" | "assistant" = h.sender === "user" ? "user" : "assistant";
+
+      // Prevent consecutive identical roles
+      const last = sanitizedHistory[sanitizedHistory.length - 1];
+      if (last && last.role === role) {
+        continue;
+      }
+
+      sanitizedHistory.push({
+        role,
         content: [{ text: h.text }],
-      })),
+      });
+    }
+
+    // Since the new turn is a user query, ensure the preceding message isn't also "user"
+    while (sanitizedHistory.length > 0 && sanitizedHistory[sanitizedHistory.length - 1].role === "user") {
+      sanitizedHistory.pop();
+    }
+
+    // Keep the most recent context (e.g., last 6 turns), ensuring it starts with "user"
+    let recentHistory = sanitizedHistory.slice(-6);
+    if (recentHistory.length > 0 && recentHistory[0].role !== "user") {
+      recentHistory = recentHistory.slice(1);
+    }
+
+    const formattedMessages = [
+      ...recentHistory,
       {
         role: "user" as const,
         content: [{ text: message }],
@@ -99,7 +134,7 @@ export async function askAirAssistant(req: Request, res: Response) {
     ];
 
     const command = new ConverseCommand({
-      modelId: env.AWS_BEDROCK_MODEL_ID || "anthropic.claude-3-haiku-20240307-v1:0",
+      modelId: env.AWS_BEDROCK_MODEL_ID || "amazon.nova-lite-v1:0",
       system: [{ text: systemPrompt }],
       messages: formattedMessages,
       inferenceConfig: {
