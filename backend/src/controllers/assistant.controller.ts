@@ -22,7 +22,8 @@ function getBedrockClient() {
  */
 function buildSystemPrompt(telemetry: any) {
   const {
-    location = "Unknown Location",
+    campusName,
+    location = "Live Location",
     aqi = "N/A",
     status = "Unknown",
     pm25 = "N/A",
@@ -34,12 +35,19 @@ function buildSystemPrompt(telemetry: any) {
     uv = "N/A",
   } = telemetry || {};
 
+  const locationText =
+    typeof location === "string"
+      ? location
+      : location?.lat && location?.lng
+      ? `${Number(location.lat).toFixed(4)}°N, ${Number(location.lng).toFixed(4)}°E`
+      : "Active Telemetry Grid";
+
   return `You are BreatheWise AI, an expert Environmental & Air Quality Health Advisor.
 Your mission is to provide actionable, evidence-based guidance based on real-time atmospheric telemetry to help people protect their lungs and optimize their daily routines.
 
 CURRENT LIVE ENVIRONMENTAL CONDITIONS:
-- Location / Coordinates: ${JSON.stringify(location)}
-- Overall Air Quality Index (US AQI): ${aqi} (${status})
+${campusName ? `- User Campus / Institution: ${campusName}\n` : ""}- Location / Coordinates: ${locationText}
+- Overall Air Quality Index (CPCB NAQI): ${aqi} (${status})
 - Fine Particulate Matter (PM2.5): ${pm25} µg/m³
 - Coarse Particulate Matter (PM10): ${pm10} µg/m³
 - Ground-Level Ozone (O₃): ${o3} µg/m³
@@ -62,7 +70,9 @@ STRICT GUARDRAILS & CORE BEHAVIOR RULES:
    - Indoors: specify whether to crack windows for fresh air or seal and turn on air purifiers.
    - Protection: recommend whether particulate filtration (N95 mask) is necessary.
 5. NO FORMAL CLINICAL DIAGNOSES:
-   Offer preventative lifestyle guidance, but remind users to consult a doctor or healthcare professional for acute medical emergencies. Keep your tone concise, scientific, empathetic, and clear.`;
+   Offer preventative lifestyle guidance, but remind users to consult a doctor or healthcare professional for acute medical emergencies. Keep your tone concise, scientific, empathetic, and clear.
+6. USER INSTITUTION & CAMPUS GROUNDING:
+   ${campusName ? `The user's registered institution is "${campusName}". Under NO circumstances call the user's campus "IIT Delhi" or any other name. Address their campus strictly as "${campusName}".` : `Do not assume or claim the user is at "IIT Delhi" or any specific campus unless explicitly mentioned by the user.`}`;
 }
 
 export async function askAirAssistant(req: Request, res: Response) {

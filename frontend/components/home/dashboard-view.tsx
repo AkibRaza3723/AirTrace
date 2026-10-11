@@ -214,29 +214,29 @@ export function DashboardView() {
   return (
     <div className="w-full flex flex-col gap-6 animate-fade-up">
       {/* Header Row */}
-      <section className="flex flex-wrap items-center justify-between gap-4">
+      <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         {/* Location Selector */}
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 shadow-sm transition-all text-left cursor-pointer"
+            className="w-full sm:w-auto group flex items-center justify-between sm:justify-start gap-3 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 shadow-sm transition-all text-left cursor-pointer"
           >
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
               <MapPin className="w-4 h-4 text-white" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium truncate">
                 {isUsingLiveLocation && !selectedPreset ? "📍 GPS Live" : "Monitoring Station"}
               </span>
-              <span className="text-sm font-semibold text-gray-900 flex items-center gap-1">
+              <span className="text-xs sm:text-sm font-semibold text-gray-900 flex items-center gap-1 truncate">
                 {activeData.city}
-                <ChevronDown className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600" />
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 shrink-0" />
               </span>
             </div>
           </button>
 
           {dropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-80 rounded-xl bg-white border border-gray-200 shadow-xl p-2 z-40 animate-fade-up">
+            <div className="absolute top-full left-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl bg-white border border-gray-200 shadow-xl p-2 z-40 animate-fade-up">
               <p className="px-3 py-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-medium">
                 Switch Indian Regional Station
               </p>
@@ -305,16 +305,16 @@ export function DashboardView() {
         </div>
 
         {/* Freshness & Methodology Badge */}
-        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white border border-gray-200 shadow-sm text-sm">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white border border-gray-200 shadow-sm text-xs sm:text-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
           <span className="text-gray-700 font-medium">
-            {loading ? "Syncing Telemetry..." : "India CPCB NAQI Standard"}
+            {loading ? "Syncing..." : "CPCB NAQI Standard"}
           </span>
-          <Separator orientation="vertical" className="h-4" />
-          <span className="text-gray-500 text-xs">Open-Meteo High-Res Stream</span>
+          <Separator orientation="vertical" className="h-4 hidden sm:block" />
+          <span className="text-gray-500 text-xs hidden sm:inline">Open-Meteo High-Res Stream</span>
           <button
             onClick={() => refetch()}
-            className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
+            className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer ml-auto sm:ml-0"
             title="Refresh live telemetry"
           >
             <RotateCcw className={cn("w-3.5 h-3.5", loading && "animate-spin text-blue-600")} />
@@ -332,11 +332,11 @@ export function DashboardView() {
               className="h-1.5 w-full"
               style={{ background: `linear-gradient(90deg, ${strokeColor}, ${strokeColor}80)` }}
             />
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                 {/* SVG Ring Dial (0 - 500 CPCB Scale) */}
                 <div className="relative flex items-center justify-center shrink-0">
-                  <svg className="w-48 h-48 -rotate-90" viewBox="0 0 160 160">
+                  <svg className="w-44 h-44 sm:w-48 sm:h-48 -rotate-90" viewBox="0 0 160 160">
                     <circle cx="80" cy="80" fill="transparent" r="68" stroke="#f1f5f9" strokeWidth="11" />
                     <circle
                       cx="80"
@@ -356,7 +356,7 @@ export function DashboardView() {
                       CPCB NAQI (India)
                     </span>
                     <span
-                      className="font-mono text-5xl font-black leading-none tracking-tight my-0.5"
+                      className="font-mono text-4xl sm:text-5xl font-black leading-none tracking-tight my-0.5"
                       style={{ color: strokeColor }}
                     >
                       {activeData.aqi}
@@ -368,8 +368,8 @@ export function DashboardView() {
                 </div>
 
                 {/* Verdict & Context */}
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                <div className="flex-1 w-full text-center sm:text-left">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-3">
                     <Badge className={cn("border-0 font-bold", getStatusBadge(activeData.status))}>
                       ● {activeData.status} Category
                     </Badge>
@@ -380,29 +380,26 @@ export function DashboardView() {
                       0–500 National Scale
                     </Badge>
                   </div>
-                  <h2 className="text-xl font-extrabold text-gray-900 mb-1">{activeData.headline}</h2>
-                  <p className="text-sm text-gray-500 leading-relaxed">{activeData.subtext}</p>
+                  <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 mb-1">{activeData.headline}</h2>
+                  <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">{activeData.subtext}</p>
 
                   {/* Weather row */}
-                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-600 pt-4 border-t border-gray-100">
-                    <div className="flex items-center gap-1.5">
-                      <Thermometer className="w-4 h-4 text-blue-500" />
-                      <span>{activeData.temp}</span>
+                  <div className="mt-4 flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs text-gray-600 pt-3 border-t border-gray-100">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
+                      <Thermometer className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                      <span className="font-medium">{activeData.temp}</span>
                     </div>
-                    <Separator orientation="vertical" className="h-4" />
-                    <div className="flex items-center gap-1.5">
-                      <Droplets className="w-4 h-4 text-blue-400" />
-                      <span>{activeData.humidity}</span>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
+                      <Droplets className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                      <span className="font-medium">{activeData.humidity}</span>
                     </div>
-                    <Separator orientation="vertical" className="h-4" />
-                    <div className="flex items-center gap-1.5">
-                      <Wind className="w-4 h-4 text-gray-400" />
-                      <span>{activeData.wind}</span>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
+                      <Wind className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                      <span className="font-medium">{activeData.wind}</span>
                     </div>
-                    <Separator orientation="vertical" className="h-4" />
-                    <div className="flex items-center gap-1.5">
-                      <Sun className="w-4 h-4 text-amber-500" />
-                      <span>{activeData.uv}</span>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
+                      <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span className="font-medium">{activeData.uv}</span>
                     </div>
                   </div>
                 </div>
@@ -738,22 +735,22 @@ export function DashboardView() {
           </Card>
 
           {/* Station attribution */}
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-500 space-y-1.5">
+          <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-500 space-y-2">
             <div className="flex items-center gap-2 font-semibold text-gray-700">
-              <Radio className="w-3.5 h-3.5 text-blue-600" />
+              <Radio className="w-3.5 h-3.5 text-blue-600 shrink-0" />
               Standard & Telemetry Attribution
             </div>
-            <div className="flex items-center justify-between">
-              <span>Standard</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
+              <span className="text-gray-400">Standard</span>
               <span className="font-semibold text-gray-800">CPCB National Air Quality Index (India NAQI)</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Atmospheric Feed</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
+              <span className="text-gray-400">Atmospheric Feed</span>
               <span className="font-medium text-gray-700">Open-Meteo High-Resolution Grid Telemetry</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Pollutants Monitored</span>
-              <span className="font-medium text-gray-700">PM2.5, PM10, NO₂, SO₂, CO, O₃, NH₃, Pb (All 8 NAQI Pollutants)</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-2">
+              <span className="text-gray-400 shrink-0">Pollutants Monitored</span>
+              <span className="font-medium text-gray-700 text-left sm:text-right">PM2.5, PM10, NO₂, SO₂, CO, O₃, NH₃, Pb (All 8 NAQI)</span>
             </div>
           </div>
         </div>

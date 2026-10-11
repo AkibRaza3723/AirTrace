@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAirTelemetry } from "@/hooks/use-air-telemetry";
+import { useAuth } from "@/lib/auth-context";
 
 interface Message {
   id: string;
@@ -119,10 +120,17 @@ const PERSPECTIVE_CONFIG: Record<
 };
 
 export default function AssistantPage() {
+  const { user } = useAuth();
   const { telemetry, isUsingLiveLocation } = useAirTelemetry();
   const [inputQuery, setInputQuery] = useState("");
   const [perspective, setPerspective] = useState<UserPerspective>("general");
   const [showPayloadInspector, setShowPayloadInspector] = useState(false);
+
+  const campusName =
+    user?.campusProfile?.campusName ||
+    (user?.college && user.college !== "Campus Unset" && user.college !== "N/A"
+      ? user.college
+      : undefined);
 
   // Initial welcome message grounded in current environment
   const [messages, setMessages] = useState<Message[]>([
@@ -149,25 +157,28 @@ export default function AssistantPage() {
 
   // Telemetry fallback defaults tailored to Delhi-NCR / CPCB
   const activeTelemetryPayload = useMemo(() => {
-    return (
-      telemetry || {
-        location: isUsingLiveLocation ? "Live Device GPS" : "Delhi-NCR Central Grid",
-        aqi: 142,
-        status: "Moderate",
-        pm25: 52.4,
-        pm10: 118.0,
-        o3: 28.5,
-        no2: 44.2,
-        so2: 12.0,
-        co: 1.1,
-        temp: "26°C",
-        humidity: "58%",
-        wind: "8 km/h NW",
-        uv: "UV 4",
-        source: "CPCB CAAQMS Grid (Delhi)",
-      }
-    );
-  }, [telemetry, isUsingLiveLocation]);
+    const base = telemetry || {
+      location: isUsingLiveLocation ? "Live Device GPS" : "Delhi-NCR Central Grid",
+      aqi: 142,
+      status: "Moderate",
+      pm25: 52.4,
+      pm10: 118.0,
+      o3: 28.5,
+      no2: 44.2,
+      so2: 12.0,
+      co: 1.1,
+      temp: "26°C",
+      humidity: "58%",
+      wind: "8 km/h NW",
+      uv: "UV 4",
+      source: "CPCB CAAQMS Grid (Delhi)",
+    };
+
+    return {
+      ...base,
+      campusName,
+    };
+  }, [telemetry, isUsingLiveLocation, campusName]);
 
   async function handleSend(text?: string) {
     const rawQuery = text || inputQuery;
@@ -285,11 +296,11 @@ export default function AssistantPage() {
         </div>
 
         {/* Perspective Switcher */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 hidden lg:inline">
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 hidden lg:inline shrink-0">
             Advisory Lens:
           </span>
-          <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl border border-gray-200 text-xs">
+          <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl border border-gray-200 text-xs shrink-0">
             {(Object.keys(PERSPECTIVE_CONFIG) as UserPerspective[]).map((key) => {
               const cfg = PERSPECTIVE_CONFIG[key];
               const isActive = perspective === key;
@@ -306,7 +317,7 @@ export default function AssistantPage() {
                   title={cfg.desc}
                 >
                   <span>{cfg.icon}</span>
-                  <span className="hidden md:inline">{cfg.label}</span>
+                  <span className="hidden sm:inline">{cfg.label}</span>
                 </button>
               );
             })}
@@ -316,45 +327,45 @@ export default function AssistantPage() {
 
       {/* 2. Live Telemetry HUD Strip */}
       <div className="p-3 rounded-2xl bg-slate-900 text-white shadow-xs border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-blue-400 font-semibold">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-blue-400 font-semibold shrink-0">
             <MapPin className="w-3.5 h-3.5" />
-            <span>{isUsingLiveLocation ? "Live GPS Coordinates" : "Delhi-NCR Monitoring Grid"}</span>
+            <span className="text-xs">{isUsingLiveLocation ? "Live GPS Coordinates" : "Delhi-NCR Monitoring Grid"}</span>
           </div>
 
           <div className="h-4 w-px bg-slate-700 hidden sm:block" />
 
           {/* Active Sensor Metrics */}
-          <div className="flex items-center gap-3 font-mono text-[11px] overflow-x-auto">
-            <span className="flex items-center gap-1">
+          <div className="flex items-center gap-3 font-mono text-[11px] overflow-x-auto no-scrollbar max-w-full">
+            <span className="flex items-center gap-1 shrink-0">
               <span className="text-gray-400">AQI:</span>
               <span className="font-bold text-amber-400">{activeTelemetryPayload.aqi}</span>
               <span className="text-[9px] text-gray-400 font-sans">({activeTelemetryPayload.status})</span>
             </span>
-            <span className="text-slate-600">•</span>
-            <span className="flex items-center gap-1">
+            <span className="text-slate-600 shrink-0">•</span>
+            <span className="flex items-center gap-1 shrink-0">
               <span className="text-gray-400">PM2.5:</span>
               <span className="font-bold text-rose-400">{activeTelemetryPayload.pm25} µg</span>
             </span>
-            <span className="text-slate-600 hidden md:inline">•</span>
-            <span className="hidden md:flex items-center gap-1">
+            <span className="text-slate-600 hidden md:inline shrink-0">•</span>
+            <span className="hidden md:flex items-center gap-1 shrink-0">
               <span className="text-gray-400">PM10:</span>
               <span className="font-bold text-yellow-400">{activeTelemetryPayload.pm10} µg</span>
             </span>
-            <span className="text-slate-600 hidden lg:inline">•</span>
-            <span className="hidden lg:flex items-center gap-1">
+            <span className="text-slate-600 hidden lg:inline shrink-0">•</span>
+            <span className="hidden lg:flex items-center gap-1 shrink-0">
               <span className="text-gray-400">O₃:</span>
               <span className="font-bold text-sky-400">{activeTelemetryPayload.o3} µg</span>
             </span>
-            <span className="text-slate-600 hidden xl:inline">•</span>
-            <span className="hidden xl:flex items-center gap-1">
+            <span className="text-slate-600 hidden xl:inline shrink-0">•</span>
+            <span className="hidden xl:flex items-center gap-1 shrink-0">
               <span className="text-gray-400">Wind:</span>
               <span className="text-gray-300 font-sans">{activeTelemetryPayload.wind}</span>
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2 ml-auto shrink-0">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold font-mono">
             Grounding Active
@@ -366,7 +377,7 @@ export default function AssistantPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 items-stretch">
         {/* Left Column: Interactive Chat Interface (7 or 8 cols) */}
         <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3">
-          <Card className="border-gray-200/80 shadow-xs rounded-2xl bg-white flex flex-col flex-1 min-h-[520px] max-h-[720px] overflow-hidden">
+          <Card className="border-gray-200/80 shadow-xs rounded-2xl bg-white flex flex-col flex-1 min-h-[440px] sm:min-h-[520px] max-h-[72vh] sm:max-h-[720px] overflow-hidden">
             {/* Chat Messages Timeline */}
             <CardContent className="p-4 flex-1 overflow-y-auto flex flex-col gap-4">
               {messages.map((msg) => (
@@ -451,7 +462,7 @@ export default function AssistantPage() {
             </CardContent>
 
             {/* Categorized Quick Question Chips */}
-            <div className="px-4 py-2 bg-gray-50/70 border-t border-gray-100 flex items-center gap-2 overflow-x-auto">
+            <div className="px-3 sm:px-4 py-2 bg-gray-50/70 border-t border-gray-100 flex items-center gap-2 overflow-x-auto no-scrollbar">
               <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 shrink-0">
                 Quick Prompts:
               </span>

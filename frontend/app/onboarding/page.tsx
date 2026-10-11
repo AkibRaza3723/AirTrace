@@ -150,11 +150,11 @@ export default function StudentOnboardingPage() {
   }
 
   return (
-    <div className="w-full min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 sm:p-6 bg-slate-50/50">
-      <div className="w-full max-w-xl bg-white rounded-3xl shadow-xl border border-gray-200/90 overflow-hidden flex flex-col">
+    <div className="w-full min-h-[calc(100vh-4rem)] flex items-center justify-center p-3 sm:p-6 bg-slate-50/50">
+      <div className="w-full max-w-xl bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-200/90 overflow-hidden flex flex-col">
         
         {/* Header */}
-        <div className="p-6 sm:p-8 bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-white border-b border-gray-100">
+        <div className="p-4 sm:p-8 bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-white border-b border-gray-100">
           <div className="flex items-center gap-2 mb-2">
             <span className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
               🎓
@@ -172,12 +172,12 @@ export default function StudentOnboardingPage() {
         </div>
 
         {error && (
-          <div className="mx-6 sm:mx-8 mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800">
+          <div className="mx-4 sm:mx-8 mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800">
             {error}
           </div>
         )}
 
-        <div className="p-6 sm:p-8 space-y-4">
+        <div className="p-4 sm:p-8 space-y-4">
           
           {/* Campus Details Card */}
           <div className="p-4 rounded-2xl border border-gray-200/90 bg-gray-50/60 space-y-3">

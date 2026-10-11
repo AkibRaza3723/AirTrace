@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { optionalAuthMiddleware } from "../middleware/auth.middleware.js";
 import {
   getCampusAirQuality,
   evaluateCampusDecision,
@@ -7,6 +8,9 @@ import {
 } from "../controllers/campus.controller.js";
 
 const router = Router();
+
+// Apply optionalAuthMiddleware to all campus endpoints
+router.use(optionalAuthMiddleware);
 
 // GET /api/campus/air-quality - Retrieves live CPCB NAQI and Open-Meteo forecasts for campus
 router.get("/air-quality", getCampusAirQuality);

@@ -288,11 +288,11 @@ function AuthContent() {
   };
 
   return (
-    <div className="w-full min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 sm:p-6 bg-radial from-blue-50/50 via-slate-50/30 to-white">
-      <div className="w-full max-w-xl bg-white rounded-3xl shadow-xl border border-gray-200/90 overflow-hidden flex flex-col">
+    <div className="w-full min-h-[calc(100vh-4rem)] flex items-center justify-center p-3 sm:p-6 bg-radial from-blue-50/50 via-slate-50/30 to-white">
+      <div className="w-full max-w-xl bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-200/90 overflow-hidden flex flex-col">
         
         {/* Brand & Tabs Header */}
-        <div className="p-6 sm:p-8 bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-white border-b border-gray-100">
+        <div className="p-4 sm:p-8 bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-white border-b border-gray-100">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5 group">
               <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center shadow-xs">
@@ -379,7 +379,7 @@ function AuthContent() {
 
         {/* ─── LOGIN FORM ────────────────────────────────────────────── */}
         {authMode === "login" && (
-          <form onSubmit={handleLogin} className="p-6 sm:p-8 space-y-4">
+          <form onSubmit={handleLogin} className="p-4 sm:p-8 space-y-4">
             <div>
               <Label className="text-xs font-semibold text-gray-700">Email Address</Label>
               <Input
@@ -437,7 +437,7 @@ function AuthContent() {
 
         {/* ─── SIGNUP FORM ───────────────────────────────────────────── */}
         {authMode === "signup" && (
-          <form onSubmit={handleSignup} className="p-6 sm:p-8 space-y-4">
+          <form onSubmit={handleSignup} className="p-4 sm:p-8 space-y-4">
             
             {/* Full Name */}
             <div>

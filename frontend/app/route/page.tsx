@@ -507,7 +507,7 @@ export default function RoutePage() {
       {/* ─── Main Layout ─────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 items-stretch">
         {/* ─── Left Panel ──────────────────────────────────── */}
-        <div className="lg:col-span-5 xl:col-span-5 flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-8.5rem)] pr-0.5">
+        <div className="lg:col-span-5 xl:col-span-5 flex flex-col gap-3 lg:overflow-y-auto lg:max-h-[calc(100vh-8.5rem)] pr-0 lg:pr-1">
           {/* Controls Box */}
           <div className="bg-white rounded-2xl p-3.5 border border-gray-200/80 shadow-xs space-y-3">
             {/* Travel Mode Selector */}
@@ -1004,7 +1004,7 @@ export default function RoutePage() {
         </div>
 
         {/* ─── Map (Right Panel) ─────────────────────────── */}
-        <div className="lg:col-span-7 xl:col-span-7 flex flex-col min-h-[500px] lg:min-h-full">
+        <div className="lg:col-span-7 xl:col-span-7 flex flex-col min-h-[380px] sm:min-h-[460px] lg:min-h-full">
           {mounted ? (
             <RouteMap
               origin={
@@ -1034,7 +1034,7 @@ export default function RoutePage() {
               isPlanning={isPlanning}
             />
           ) : (
-            <div className="w-full h-full min-h-[500px] rounded-2xl bg-slate-100 flex items-center justify-center border border-gray-200">
+            <div className="w-full h-full min-h-[380px] sm:min-h-[460px] lg:min-h-[500px] rounded-2xl bg-slate-100 flex items-center justify-center border border-gray-200">
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
                 <span>Loading Map...</span>

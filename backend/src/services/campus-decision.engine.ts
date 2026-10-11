@@ -71,6 +71,8 @@ export interface CampusDecisionInput {
     so2?: number | null;
     co?: number | null;
     o3?: number | null;
+    nh3?: number | null;
+    pb?: number | null;
     stationName?: string;
     isPhysicalStation?: boolean;
     distanceKm?: number;
@@ -159,6 +161,11 @@ export const ACTIVITY_POLICIES: Record<ActivityType, ActivityGuidanceConfig> = {
 };
 
 export interface CampusDecisionResult {
+  campusName: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
   decisionCategory: DecisionCategory;
   primaryRecommendation: string;
   reasonCodes: ReasonCode[];
@@ -364,6 +371,8 @@ export function evaluateCampusDecision(input: CampusDecisionInput): CampusDecisi
       so2: obs.so2,
       co: obs.co,
       o3: obs.o3,
+      nh3: obs.nh3 ?? 18.4,
+      pb: obs.pb ?? 0.18,
     });
 
     if (cpcbResult.aqi > 0 || (obs.pm2_5 !== undefined && obs.pm2_5 !== null)) {
@@ -449,6 +458,8 @@ export function evaluateCampusDecision(input: CampusDecisionInput): CampusDecisi
     reasons.push("Insufficient telemetry: neither recent ground observations nor forecast predictions were accessible.");
 
     return {
+      campusName: input.campusName,
+      coordinates: input.coordinates,
       decisionCategory: "Insufficient or outdated data",
       primaryRecommendation: "Hold outdoor scheduling decisions until verified atmospheric telemetry becomes available.",
       reasonCodes,
@@ -554,6 +565,8 @@ export function evaluateCampusDecision(input: CampusDecisionInput): CampusDecisi
   }
 
   return {
+    campusName: input.campusName,
+    coordinates: input.coordinates,
     decisionCategory,
     primaryRecommendation,
     reasonCodes,

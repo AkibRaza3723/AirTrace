@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
+import { useAirTelemetry } from "@/hooks/use-air-telemetry";
 
 // Preset Indian Collegiate Campuses
 interface CampusPreset {
@@ -138,6 +139,7 @@ function getDateOffset(baseDateStr: string, offsetDays: number): string {
 export default function CampusDecisionPage() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
   const { user } = useAuth();
+  const { telemetry: dashboardTelemetry } = useAirTelemetry();
 
   // Selected campus & Custom coordinates state — Defaults to Delhi Campus if not given
   const [selectedCampus, setSelectedCampus] = useState<CampusPreset>(DELHI_CAMPUS);
@@ -153,15 +155,18 @@ export default function CampusDecisionPage() {
     let isMounted = true;
 
     async function resolveCampus() {
-      // 1. If user has campusProfile in auth-context
-      if (user?.campusProfile?.campusLatitude && user?.campusProfile?.campusLongitude) {
+      // 1. If user has campusProfile or college in auth-context
+      const registeredName = user?.campusProfile?.campusName || (user?.college && user.college !== "Campus Unset" && user.college !== "N/A" ? user.college : "");
+      if (registeredName) {
+        const lat = Number(user?.campusProfile?.campusLatitude || user?.preferredLat || DELHI_CAMPUS.lat);
+        const lng = Number(user?.campusProfile?.campusLongitude || user?.preferredLng || DELHI_CAMPUS.lng);
         const uCampus: CampusPreset = {
           id: "my-campus",
-          name: user.campusProfile.campusName,
-          city: user.campusProfile.campusAddress || "My Registered Campus",
-          lat: Number(user.campusProfile.campusLatitude),
-          lng: Number(user.campusProfile.campusLongitude),
-          defaultStation: `${user.campusProfile.campusName} Monitoring Zone`,
+          name: registeredName,
+          city: user?.campusProfile?.campusAddress || user?.preferredAddress || "My Registered Campus",
+          lat,
+          lng,
+          defaultStation: `${registeredName} Monitoring Zone`,
         };
         if (isMounted) {
           setUserSavedCampus(uCampus);
@@ -179,13 +184,13 @@ export default function CampusDecisionPage() {
           });
           if (res.ok) {
             const data = await res.json();
-            if (data.campusProfile?.campusLatitude && data.campusProfile?.campusLongitude) {
+            if (data.campusProfile?.campusName) {
               const uCampus: CampusPreset = {
                 id: "my-campus",
                 name: data.campusProfile.campusName,
                 city: data.campusProfile.campusAddress || "My Registered Campus",
-                lat: Number(data.campusProfile.campusLatitude),
-                lng: Number(data.campusProfile.campusLongitude),
+                lat: Number(data.campusProfile.campusLatitude || DELHI_CAMPUS.lat),
+                lng: Number(data.campusProfile.campusLongitude || DELHI_CAMPUS.lng),
                 defaultStation: `${data.campusProfile.campusName} Monitoring Zone`,
               };
               if (isMounted) {
@@ -268,9 +273,16 @@ export default function CampusDecisionPage() {
     try {
       const res = await fetch(`${apiUrl}/api/campus/explain`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          decisionResult: decision,
+          decisionResult: {
+            ...decision,
+            campusName: currentCampusName,
+            coordinates: currentCoords,
+          },
+          campusName: currentCampusName,
+          userId: user?.id,
           userQuestion: question,
         }),
       });
@@ -284,7 +296,7 @@ export default function CampusDecisionPage() {
       setExplaining(false);
       setQnaLoading(false);
     }
-  }, [apiUrl]);
+  }, [apiUrl, currentCampusName, currentCoords, user?.id]);
 
   // Fetch telemetry, decision, and zones
   const fetchData = useCallback(async () => {
@@ -296,19 +308,37 @@ export default function CampusDecisionPage() {
       const aqRes = await fetch(
         `${apiUrl}/api/campus/air-quality?lat=${currentCoords.lat}&lng=${currentCoords.lng}&name=${encodeURIComponent(
           currentCampusName
-        )}`
+        )}&userId=${user?.id || ""}`,
+        { credentials: "include" }
       );
       if (!aqRes.ok) throw new Error("Could not retrieve upstream air quality telemetry.");
       const aqJson = await aqRes.json();
       setTelemetryData(aqJson.data);
 
-      // 2. Fetch deterministic decision
+      // If backend resolved genuine campus from database, adopt it immediately
+      if (aqJson.data?.campus?.name && aqJson.data.campus.fromDatabase && selectedCampus.id !== "my-campus") {
+        const uCampus: CampusPreset = {
+          id: "my-campus",
+          name: aqJson.data.campus.name,
+          city: "My Registered Campus",
+          lat: Number(aqJson.data.campus.coordinates.lat),
+          lng: Number(aqJson.data.campus.coordinates.lng),
+          defaultStation: `${aqJson.data.campus.name} Monitoring Zone`,
+        };
+        setUserSavedCampus(uCampus);
+        setSelectedCampus(uCampus);
+      }
+
+      // 2. Fetch deterministic decision (synchronizing with dashboard telemetry if available)
       const decisionRes = await fetch(`${apiUrl}/api/campus/decision`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           campusName: currentCampusName,
           coordinates: currentCoords,
+          userId: user?.id,
+          telemetry: dashboardTelemetry || aqJson.data?.observation,
           activityType,
           plannedDate,
           plannedStartTime,
@@ -322,7 +352,10 @@ export default function CampusDecisionPage() {
       setDecisionResult(decisionJson.data);
 
       // 3. Fetch campus zones
-      const zonesRes = await fetch(`${apiUrl}/api/campus/zones?lat=${currentCoords.lat}&lng=${currentCoords.lng}`);
+      const zonesRes = await fetch(
+        `${apiUrl}/api/campus/zones?lat=${currentCoords.lat}&lng=${currentCoords.lng}&userId=${user?.id || ""}`,
+        { credentials: "include" }
+      );
       if (zonesRes.ok) {
         const zonesJson = await zonesRes.json();
         setZonesData(zonesJson.data);
@@ -340,6 +373,9 @@ export default function CampusDecisionPage() {
     currentCoords.lat,
     currentCoords.lng,
     currentCampusName,
+    selectedCampus.id,
+    user?.id,
+    dashboardTelemetry,
     activityType,
     plannedDate,
     plannedStartTime,
@@ -548,7 +584,7 @@ export default function CampusDecisionPage() {
             </button>
 
             {campusDropdownOpen && (
-              <div className="absolute top-full right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white border border-gray-200 shadow-2xl p-3 z-50 animate-in fade-in-50 zoom-in-95">
+              <div className="absolute top-full right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white border border-gray-200 shadow-2xl p-3 z-50 animate-in fade-in-50 zoom-in-95">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 py-1">
                   Select Collegiate Institution
                 </p>
@@ -980,47 +1016,50 @@ export default function CampusDecisionPage() {
           )}
 
           {/* Sub-Navigation Tabs */}
-          <div className="flex items-center justify-between border-b border-gray-200/80 pb-2">
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-between border-b border-gray-200/80 pb-2 gap-2">
+            <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto">
               <button
                 onClick={() => setActiveTab("telemetry")}
                 className={cn(
-                  "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                  "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap",
                   activeTab === "telemetry"
                     ? "bg-blue-600 text-white shadow-xs"
                     : "text-gray-600 hover:bg-gray-100"
                 )}
               >
                 <Gauge className="w-3.5 h-3.5" />
-                Live Telemetry & Zones
+                <span className="hidden sm:inline">Live Telemetry & Zones</span>
+                <span className="sm:hidden">Telemetry</span>
               </button>
               <button
                 onClick={() => setActiveTab("comparison")}
                 className={cn(
-                  "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                  "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap",
                   activeTab === "comparison"
                     ? "bg-blue-600 text-white shadow-xs"
                     : "text-gray-600 hover:bg-gray-100"
                 )}
               >
                 <Clock className="w-3.5 h-3.5" />
-                Time Slot Forecast
+                <span className="hidden sm:inline">Time Slot Forecast</span>
+                <span className="sm:hidden">Forecast</span>
               </button>
               <button
                 onClick={() => setActiveTab("advisor")}
                 className={cn(
-                  "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                  "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap",
                   activeTab === "advisor"
                     ? "bg-blue-600 text-white shadow-xs"
                     : "text-gray-600 hover:bg-gray-100"
                 )}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Grounded AI Advisor
+                <span className="hidden sm:inline">Grounded AI Advisor</span>
+                <span className="sm:hidden">AI Advisor</span>
               </button>
             </div>
 
-            <span className="text-[10px] font-mono text-gray-400 hidden sm:inline">
+            <span className="text-[10px] font-mono text-gray-400 hidden md:inline shrink-0">
               Station: {telemetryData?.monitoringStation?.name ? telemetryData.monitoringStation.name.split(" ")[0] : "CAAQMS"}
             </span>
           </div>

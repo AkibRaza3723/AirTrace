@@ -51,7 +51,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans selection:bg-blue-100 selection:text-blue-800 bg-[var(--background)] text-[var(--on-surface)]">
         <AuthProvider>
           <Header />
-          <main className="w-full pt-24 lg:pt-16 flex-1 flex flex-col">
+          <main className="w-full flex-1 flex flex-col">
             <RouteGuard>{children}</RouteGuard>
           </main>
           <Footer />

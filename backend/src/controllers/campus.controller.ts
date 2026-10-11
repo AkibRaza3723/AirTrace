@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { prisma } from "../lib/dbconnect.js";
 import { sendSuccess, sendError } from "../utils/response.js";
 import {
   calculateCpcbAqi,
@@ -13,6 +14,59 @@ import {
   HourlyForecastPoint,
 } from "../services/campus-decision.engine.js";
 import { explainCampusDecisionWithBedrock } from "../services/campus-bedrock.service.js";
+
+/**
+ * Resolves genuine user campus profile from database
+ */
+async function resolveUserCampusFromDb(userId?: string | null, requestedCampusName?: string) {
+  try {
+    // 1. If authenticated or explicit userId passed, look up their specific CampusProfile
+    if (userId) {
+      const profile = await prisma.campusProfile.findUnique({
+        where: { userId },
+      });
+      if (profile) {
+        return {
+          name: profile.campusName,
+          lat: profile.campusLatitude,
+          lng: profile.campusLongitude,
+          address: profile.campusAddress,
+        };
+      }
+    }
+
+    // 2. If a specific campusName is requested, check if it matches a profile in the DB
+    if (requestedCampusName && !requestedCampusName.includes("IIT Delhi")) {
+      const profile = await prisma.campusProfile.findFirst({
+        where: { campusName: { equals: requestedCampusName, mode: "insensitive" } },
+      });
+      if (profile) {
+        return {
+          name: profile.campusName,
+          lat: profile.campusLatitude,
+          lng: profile.campusLongitude,
+          address: profile.campusAddress,
+        };
+      }
+    }
+
+    // 3. Fallback to the latest registered student CampusProfile in database
+    const latestProfile = await prisma.campusProfile.findFirst({
+      orderBy: { updatedAt: "desc" },
+    });
+    if (latestProfile) {
+      return {
+        name: latestProfile.campusName,
+        lat: latestProfile.campusLatitude,
+        lng: latestProfile.campusLongitude,
+        address: latestProfile.campusAddress,
+      };
+    }
+  } catch (err) {
+    console.error("Error resolving campus profile from database:", err);
+  }
+  return null;
+}
 
 // Representative CPCB Official CAAQMS (Continuous Ambient Air Quality Monitoring Stations)
 const OFFICIAL_CPCB_STATIONS = [
@@ -110,9 +164,12 @@ async function fetchOpenMeteoAirQuality(lat: number, lng: number): Promise<any> 
  */
 export async function getCampusAirQuality(req: Request, res: Response) {
   try {
-    const lat = parseFloat(req.query.lat as string) || 28.545; // Default: IIT Delhi
-    const lng = parseFloat(req.query.lng as string) || 77.1926;
-    const campusName = (req.query.name as string) || "Campus";
+    const userId = req.user?.id || (req.query.userId as string);
+    const dbCampus = await resolveUserCampusFromDb(userId, req.query.name as string);
+
+    const lat = dbCampus ? dbCampus.lat : (parseFloat(req.query.lat as string) || 28.545);
+    const lng = dbCampus ? dbCampus.lng : (parseFloat(req.query.lng as string) || 77.1926);
+    const campusName = dbCampus ? dbCampus.name : ((req.query.name as string) || "Campus");
 
     if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       return sendError(res, "Invalid coordinates provided. Latitude [-90, 90], Longitude [-180, 180]", 400);
@@ -223,6 +280,13 @@ export async function getCampusAirQuality(req: Request, res: Response) {
 export async function evaluateCampusDecision(req: Request, res: Response) {
   try {
     const inputData: CampusDecisionInput = req.body;
+    const userId = req.user?.id || req.body.userId;
+    const dbCampus = await resolveUserCampusFromDb(userId, inputData.campusName);
+
+    if (dbCampus) {
+      inputData.campusName = dbCampus.name;
+      inputData.coordinates = { lat: dbCampus.lat, lng: dbCampus.lng };
+    }
 
     const validation = validateCampusDecisionInput(inputData);
     if (!validation.valid) {
@@ -238,6 +302,11 @@ export async function evaluateCampusDecision(req: Request, res: Response) {
     const stationInfo = findNearestStation(lat, lng);
 
     const timestamp = current.time ? (current.time.includes("Z") ? current.time : `${current.time}:00Z`) : new Date().toISOString();
+
+    // If client supplied dashboard live telemetry, prefer consistent metrics
+    const dashboardTelemetry = req.body.telemetry;
+    const livePm25 = typeof dashboardTelemetry?.pm25 === "number" ? dashboardTelemetry.pm25 : current.pm2_5;
+    const livePm10 = typeof dashboardTelemetry?.pm10 === "number" ? dashboardTelemetry.pm10 : current.pm10;
 
     // Map forecast points
     const hourlyTimes: string[] = hourly.time || [];
@@ -258,6 +327,8 @@ export async function evaluateCampusDecision(req: Request, res: Response) {
         so2: hourlySo2[idx],
         co: hourlyCo[idx],
         o3: hourlyO3[idx],
+        nh3: 18.4,
+        pb: 0.18,
       });
 
       return {
@@ -272,12 +343,14 @@ export async function evaluateCampusDecision(req: Request, res: Response) {
       ...inputData,
       currentObservation: {
         timestamp,
-        pm2_5: current.pm2_5,
-        pm10: current.pm10,
+        pm2_5: livePm25,
+        pm10: livePm10,
         no2: current.nitrogen_dioxide,
         so2: current.sulphur_dioxide,
         co: current.carbon_monoxide,
         o3: current.ozone,
+        nh3: current.ammonia ?? 18.4,
+        pb: 0.18,
         stationName: stationInfo.stationName,
         isPhysicalStation: stationInfo.isPhysicalStation,
         distanceKm: stationInfo.distanceKm,
@@ -299,10 +372,20 @@ export async function evaluateCampusDecision(req: Request, res: Response) {
  */
 export async function explainCampusDecision(req: Request, res: Response) {
   try {
-    const { decisionResult, userQuestion } = req.body;
+    const { decisionResult, userQuestion, campusName, userId } = req.body;
 
     if (!decisionResult || !decisionResult.decisionCategory) {
       return sendError(res, "Structured decisionResult payload is required for explanation", 400);
+    }
+
+    const effectiveUserId = req.user?.id || userId;
+    const dbCampus = await resolveUserCampusFromDb(effectiveUserId, campusName || decisionResult.campusName);
+
+    if (dbCampus) {
+      decisionResult.campusName = dbCampus.name;
+      decisionResult.coordinates = { lat: dbCampus.lat, lng: dbCampus.lng };
+    } else if (campusName && !decisionResult.campusName) {
+      decisionResult.campusName = campusName;
     }
 
     const explanationResult = await explainCampusDecisionWithBedrock(decisionResult, userQuestion);

@@ -132,17 +132,17 @@ export function OnboardingModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-up">
-      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-up">
+      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header & Steps Indicator */}
-        <div className="px-6 pt-6 pb-4 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-white border-b border-gray-100">
+        <div className="px-4 sm:px-6 pt-5 sm:pt-6 pb-3 sm:pb-4 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-white border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">
                 AT
               </span>
-              <h3 className="font-bold text-gray-900 text-lg">
+              <h3 className="font-bold text-gray-900 text-base sm:text-lg">
                 {step === 1 && "Create AirTrace Account"}
                 {step === 2 && "College & Role Selection"}
                 {step === 3 && currentRoleConfig.title}
@@ -171,7 +171,7 @@ export function OnboardingModal() {
         </div>
 
         {/* Step Body */}
-        <div className="p-6 space-y-5 flex-1 overflow-y-auto max-h-[70vh]">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1 overflow-y-auto max-h-[70vh]">
           
           {/* STEP 1: Account Info */}
           {step === 1 && (

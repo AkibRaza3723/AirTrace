@@ -20,22 +20,24 @@ function getBedrockClient(): BedrockRuntimeClient | null {
  * concentrations, CPCB NAQI scores, regulatory thresholds (GRAP, NPCCHH), and campus activity rules.
  */
 function buildExplanationSystemPrompt(decisionResult: CampusDecisionResult): string {
-  const { currentConditions, activity, slotComparison, decisionCategory, primaryRecommendation, reasons } =
+  const { currentConditions, activity, slotComparison, decisionCategory, primaryRecommendation, reasons, campusName, coordinates } =
     decisionResult;
 
   const current = currentConditions;
   const planned = slotComparison?.plannedSlot;
   const alt = slotComparison?.alternativeSlot;
+  const resolvedCampusName = campusName || "Student Campus";
 
   return `You are BreatheWise Campus Air Intelligence Advisor, an expert institutional environmental health and safety consultant assisting school principals, athletic directors, collegiate administrators, teachers, and students.
 
 CURRENT REAL-TIME CAMPUS ENVIRONMENTAL TELEMETRY:
-- Campus Location: ${current?.stationName ? current.stationName : "Campus Coordinates"}
-- Monitoring Station: ${current?.stationName || "Atmospheric Grid Point"}${current?.distanceKm ? ` (${current.distanceKm} km away)` : ""}
-- Station Type: ${current?.isPhysicalStation ? "Physical CPCB CAAQMS Continuous Ambient Station" : "High-Resolution Atmospheric Model Grid"}
-- CPCB Indian NAQI: ${current?.aqi ?? "N/A"} (${current?.category ?? "Unknown"})
+- Registered Campus / Institution: ${resolvedCampusName}
+- Campus Coordinates: ${coordinates ? `${coordinates.lat.toFixed(4)}°N, ${coordinates.lng.toFixed(4)}°E` : "Active Coordinates"}
+- Nearest CPCB Reference Air Quality Sensor / Station: ${current?.stationName || "Atmospheric Grid Point"}${current?.distanceKm ? ` (${current.distanceKm} km away from ${resolvedCampusName})` : ""}
+- Sensor Station Type: ${current?.isPhysicalStation ? "Physical CPCB CAAQMS Continuous Ambient Station" : "High-Resolution Atmospheric Model Grid"}
+- CPCB Indian NAQI (Official Air Quality Index): ${current?.aqi ?? "N/A"} (${current?.category ?? "Unknown"})
 - Prominent Pollutant: ${current?.prominentPollutant ?? "Particulate Matter"}
-- Particulate Matter (PM2.5): ${current?.pm2_5 !== null && current?.pm2_5 !== undefined ? `${current.pm2_5} µg/m³ (CPCB 24-hr Standard: 60 µg/m³)` : "N/A"}
+- Fine Particulate Matter (PM2.5): ${current?.pm2_5 !== null && current?.pm2_5 !== undefined ? `${current.pm2_5} µg/m³ (CPCB 24-hr Standard: 60 µg/m³)` : "N/A"}
 - Coarse Particulates (PM10): ${current?.pm10 !== null && current?.pm10 !== undefined ? `${current.pm10} µg/m³ (CPCB 24-hr Standard: 100 µg/m³)` : "N/A"}
 - Nitrogen Dioxide (NO₂): ${current?.no2 !== null && current?.no2 !== undefined ? `${current.no2} µg/m³ (Standard: 80 µg/m³)` : "N/A"}
 - Sulphur Dioxide (SO₂): ${current?.so2 !== null && current?.so2 !== undefined ? `${current.so2} µg/m³` : "N/A"}
@@ -43,6 +45,7 @@ CURRENT REAL-TIME CAMPUS ENVIRONMENTAL TELEMETRY:
 - Ozone (O₃): ${current?.o3 !== null && current?.o3 !== undefined ? `${current.o3} µg/m³` : "N/A"}
 
 SCHEDULED CAMPUS ACTIVITY CONTEXT:
+- Target Campus: ${resolvedCampusName}
 - Activity Type: ${activity?.displayName || "Campus Outdoor Activity"}
 - Exertion Level: ${activity?.exertionLevel || "Standard"}
 - Official Regulatory Policy: ${activity?.officialPolicySource || (activity as any)?.officialSource || "CPCB Institutional Guidelines"}
@@ -60,15 +63,16 @@ CAMPUS REGULATORY STANDARDS & ACTIVITY PERMISSION RULES (CPCB & NPCCHH INDIA):
 5. AQI 301–400 (Very Poor / GRAP Stage III): Full prohibition of outdoor physical education, assemblies, and sports. Move all activities to indoor facilities with closed windows and active HEPA filtration. Fit N95 masks for outdoor building-to-building transit.
 6. AQI 401+ (Severe / GRAP Stage IV): Immediate suspension of all outdoor events. Physical classes may be restricted as per Department of Education / CPCB mandates.
 
-YOUR INSTRUCTIONS:
-- You are here to answer ANY questions about campus operations, pollution levels, student health, and allowed activities.
-- When answering user questions, ALWAYS refer specifically to the current pollutant readings (e.g. quoting PM2.5: ${current?.pm2_5 ?? "N/A"} µg/m³ or AQI: ${current?.aqi ?? "N/A"}).
-- State clearly whether the activity or request is:
-  ✅ APPROVED (Full Permission)
-  ⚠️ RESTRICTED / MODIFIED (Requires Precautions)
-  🚫 STRICTLY PROHIBITED (Unsafe for Lungs)
-- Provide practical, operational advice: e.g. indoor gymnasiums, ventilation recommendations, rescheduling windows, and protection for asthmatic students.
-- Be clear, empathetic, authoritative, and concise. Use formatted markdown with clear headers and bullet points.`;
+STRICT CONTEXT, IDENTITY & GROUNDING INSTRUCTIONS:
+1. THE STUDENT'S CAMPUS IS "${resolvedCampusName}". You MUST address and refer to their institution strictly as "${resolvedCampusName}".
+2. DO NOT confuse the monitoring sensor station ("${current?.stationName}") with the campus. Under NO circumstances tell the user that their campus is "${current?.stationName}" or "IIT Delhi" unless their registered campus name is specifically IIT Delhi. "${current?.stationName}" is merely the nearest scientific CPCB sensor providing air data.
+3. GROUNDED NUMBERS: Always quote the exact real-time AQI (${current?.aqi ?? "N/A"}) and PM2.5 level (${current?.pm2_5 ?? "N/A"} µg/m³) provided in this prompt. Do not invent or alter these numbers.
+4. State clearly whether the activity or request is:
+   ✅ APPROVED (Full Permission)
+   ⚠️ RESTRICTED / MODIFIED (Requires Precautions)
+   🚫 STRICTLY PROHIBITED (Unsafe for Lungs)
+5. Provide practical, operational advice: e.g. indoor gymnasiums, ventilation recommendations, rescheduling windows, and protection for asthmatic students.
+6. Be clear, empathetic, authoritative, and concise. Use formatted markdown with clear headers and bullet points.`;
 }
 
 /**
@@ -79,9 +83,10 @@ export function generateDeterministicFallbackExplanation(
   decisionResult: CampusDecisionResult,
   userQuestion?: string
 ): string {
-  const { decisionCategory, primaryRecommendation, reasons, slotComparison, currentConditions, activity } =
+  const { decisionCategory, primaryRecommendation, reasons, slotComparison, currentConditions, activity, campusName } =
     decisionResult;
 
+  const resolvedCampusName = campusName || "Student Campus";
   const planned = slotComparison?.plannedSlot;
   const alt = slotComparison?.alternativeSlot;
 
@@ -113,12 +118,13 @@ export function generateDeterministicFallbackExplanation(
   }
 
   return `### Executive Summary
-The Campus Decision Engine has designated this window as **"${decisionCategory}"**. ${primaryRecommendation}
+The Campus Decision Engine has designated this window for **${resolvedCampusName}** as **"${decisionCategory}"**. ${primaryRecommendation}
 
 ### Real-Time Atmospheric Conditions
+- **Campus Institution**: ${resolvedCampusName}
 - **AQI**: ${currentConditions?.aqi ?? "N/A"} (${currentConditions?.category ?? "Unknown"})
 - **PM2.5**: ${currentConditions?.pm2_5 ?? "N/A"} µg/m³ | **PM10**: ${currentConditions?.pm10 ?? "N/A"} µg/m³
-- **Monitoring Station**: ${currentConditions?.stationName || "Local Telemetry Station"}
+- **Reference Monitoring Sensor**: ${currentConditions?.stationName || "Local Telemetry Station"}
 
 ### Time Slot Analysis
 ${slotText}
@@ -127,7 +133,7 @@ ${slotText}
 ${actions.map((a) => `- ${a}`).join("\n")}
 
 ### Data Attribution & Caveats
-Readings sourced from ${currentConditions?.source || "Official CPCB / Open-Meteo Air Quality Telemetry"}${currentConditions?.distanceKm ? ` (${currentConditions.distanceKm} km from campus)` : ""}. Telemetry is designed for institutional guidance.`;
+Readings sourced from ${currentConditions?.source || "Official CPCB / Open-Meteo Air Quality Telemetry"}${currentConditions?.distanceKm ? ` (${currentConditions.distanceKm} km from ${resolvedCampusName})` : ""}. Telemetry is designed for institutional guidance.`;
 }
 
 /**

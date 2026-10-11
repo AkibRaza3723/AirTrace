@@ -18,35 +18,35 @@ export function HeroSection() {
     <div className="w-full flex flex-col gap-12 pb-12">
       
       {/* Top Banner / Announcement */}
-      <div className="flex justify-center pt-2">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50/90 border border-blue-200/80 text-xs text-blue-800 shadow-sm animate-fade-up">
-          <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+      <div className="flex justify-center pt-2 px-2">
+        <div className="inline-flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full bg-blue-50/90 border border-blue-200/80 text-[11px] sm:text-xs text-blue-800 shadow-sm animate-fade-up max-w-full text-center">
+          <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
           <span className="font-semibold">BreatheWise Environmental Track 2026</span>
-          <span className="text-gray-400">|</span>
+          <span className="text-gray-400 hidden sm:inline">|</span>
           <span className="text-blue-600 flex items-center gap-1 font-medium">
-            OpenAQ + NASA Satellite Ingestion <ChevronRight className="w-3.5 h-3.5" />
+            OpenAQ + NASA Satellite <ChevronRight className="w-3.5 h-3.5 shrink-0" />
           </span>
         </div>
       </div>
 
       {/* Hero Headline & CTA */}
-      <div className="max-w-4xl mx-auto text-center space-y-6 px-4">
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900 leading-[1.15]">
+      <div className="max-w-4xl mx-auto text-center space-y-5 sm:space-y-6 px-3 sm:px-4">
+        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900 leading-[1.15]">
           Actionable Air Intelligence,{" "}
           <span className="gradient-text-primary">Not Just City Averages.</span>
         </h1>
 
-        <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
           AirTrace translates atmospheric telemetry into quantifiable personal intake reduction, pollution-aware clean routing, and institutional campus safety modes.
         </p>
 
         {/* Action CTAs */}
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 w-full max-w-md mx-auto sm:max-w-none">
           {user?.isLoggedIn ? (
-            <Link href="/dashboard">
+            <Link href="/dashboard" className="w-full sm:w-auto">
               <Button
                 size="lg"
-                className="rounded-xl px-8 py-6 text-sm sm:text-base font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-blue-500/25 transition-all gap-2"
+                className="w-full sm:w-auto rounded-xl px-8 py-5 sm:py-6 text-sm sm:text-base font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-blue-500/25 transition-all gap-2"
               >
                 <LayoutDashboard className="w-4 h-4 text-blue-200" />
                 Open Live Dashboard
@@ -55,10 +55,10 @@ export function HeroSection() {
             </Link>
           ) : (
             <>
-              <Link href="/auth?mode=signup">
+              <Link href="/auth?mode=signup" className="w-full sm:w-auto">
                 <Button
                   size="lg"
-                  className="rounded-xl px-7 py-6 text-sm sm:text-base font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-blue-500/25 transition-all gap-2 group cursor-pointer"
+                  className="w-full sm:w-auto rounded-xl px-7 py-5 sm:py-6 text-sm sm:text-base font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-blue-500/25 transition-all gap-2 group cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-blue-200 group-hover:rotate-12 transition-transform" />
                   Sign Up & Get Started
@@ -66,11 +66,11 @@ export function HeroSection() {
                 </Button>
               </Link>
 
-              <Link href="/auth?mode=login">
+              <Link href="/auth?mode=login" className="w-full sm:w-auto">
                 <Button
                   variant="outline"
                   size="lg"
-                  className="rounded-xl px-6 py-6 text-sm sm:text-base font-semibold border-gray-300 hover:bg-gray-100/80 text-gray-700 transition-all gap-2 cursor-pointer"
+                  className="w-full sm:w-auto rounded-xl px-6 py-5 sm:py-6 text-sm sm:text-base font-semibold border-gray-300 hover:bg-gray-100/80 text-gray-700 transition-all gap-2 cursor-pointer"
                 >
                   Log In to Account <ChevronRight className="w-4 h-4 text-gray-400" />
                 </Button>
@@ -80,7 +80,7 @@ export function HeroSection() {
         </div>
 
         {/* Quick Trust Badges */}
-        <div className="flex flex-wrap items-center justify-center gap-6 pt-4 text-xs text-gray-500">
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 pt-3 sm:pt-4 text-[11px] sm:text-xs text-gray-500">
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
             Verified Campus Role Access
