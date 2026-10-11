@@ -5,9 +5,11 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm ci
+            - nvm use 20 || nvm install 20
+            - npm ci --cache .npm --prefer-offline
         build:
           commands:
+            - env | grep -E '^(NEXT_PUBLIC_)' >> .env.production || true
             - npm run build
       artifacts:
         baseDirectory: .next
@@ -15,5 +17,6 @@ applications:
           - '**/*'
       cache:
         paths:
-          - node_modules/**/*
           - .next/cache/**/*
+          - .npm/**/*
+          - node_modules/**/*
