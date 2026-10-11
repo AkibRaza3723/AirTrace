@@ -127,18 +127,6 @@ export function Header() {
                   : "bg-rose-50 border-rose-200 text-rose-800"
               )}
             >
-              <span
-                className={cn(
-                  "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-pulse",
-                  telemetry && telemetry.aqi <= 100
-                    ? "bg-emerald-500"
-                    : telemetry && telemetry.aqi <= 200
-                    ? "bg-amber-500"
-                    : "bg-red-500"
-                )}
-              />
-              <span className="font-mono">NAQI {telemetry?.aqi ?? 145}</span>
-              <span className="font-normal opacity-80 hidden md:inline">{telemetry?.status ?? "Moderate"}</span>
             </div>
           )}
 
